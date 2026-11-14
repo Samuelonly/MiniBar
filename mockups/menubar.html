@@ -143,6 +143,7 @@
   }
   .expwrap.open .children{display:block;animation:pop .18s var(--damp)}
   .child-row{min-height:22px;font-size:12px;padding:4px 8px}
+  .child-row .switch{margin-left:auto}
   .child-row .dev{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .child-row .tag{
     font-size:10px;color:var(--txt-faint);border:1px solid rgba(255,255,255,.14);
@@ -273,8 +274,8 @@
       <span class="grow">旋转方向</span><span class="chev">▾</span>
     </div>
     <div class="children" id="rot">
-      <div class="child-row on-row"><span class="check" style="visibility:visible;color:var(--txt)">✓</span><span class="dev">横屏</span></div>
-      <div class="child-row"><span class="check" style="visibility:hidden">✓</span><span class="dev">竖屏</span></div>
+      <div class="child-row"><span class="dev">横屏</span><label class="switch sm"><input type="checkbox" checked><span class="knob"></span></label></div>
+      <div class="child-row"><span class="dev">竖屏</span><label class="switch sm"><input type="checkbox"><span class="knob"></span></label></div>
     </div>
   </div>
 
@@ -283,11 +284,11 @@
   <div class="sec">自适应</div>
   <div class="item swrow">
     <span class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.7 4.5 3.5 7.7l2.6 2.6-2 2 3.2 3.2 2-2 2.6 2.6 3.2-3.2-2.6-2.6 2-2L9.3 2.5l-2 2-2.6-2.6Zm10.8 8 3.2 3.2-2.6 2.6 2 2-3.2 3.2-2-2-2.6 2.6-3.2-3.2 2.6-2.6-2-2 3.2-3.2 2 2 2.6-2.8Z"/></svg></span>
-    <span class="grow">自适应显示</span>
+    <span class="grow">观影模式</span>
     <label class="switch sm"><input type="checkbox" id="adaptiveSw" checked><span class="knob"></span></label>
   </div>
   <div class="child-row" style="margin:0 6px;color:var(--txt-faint);border:none;background:none;cursor:default">
-    播放器打开自动提亮，回桌面自动还原
+    看视频时自动提亮，离开自动还原
   </div>
 
   <div class="sep"></div>
@@ -303,7 +304,7 @@
   <div class="sec">电源</div>
   <div class="item swrow">
     <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="12" rx="2.5"/><line x1="9" y1="21" x2="15" y2="21"/></svg></span>
-    <span class="grow">屏幕</span>
+    <span class="grow">屏幕休眠</span>
     <label class="switch sm"><input type="checkbox" id="screenSw"><span class="knob"></span></label>
   </div>
   <div class="item swrow">
@@ -312,7 +313,7 @@
     <label class="switch sm"><input type="checkbox" id="sleepSw"><span class="knob"></span></label>
   </div>
   <div class="item swrow">
-    <span class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4.5 13.5H11L9.5 22 19 9.5h-6.5L13 2Z"/></svg></span>
+    <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 8h12v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Z"/><path d="M16 9h2a2.5 2.5 0 0 1 0 5h-2"/><path d="M7 3c0 1 1 1 1 2M11 3c0 1 1 1 1 2"/></svg></span>
     <span class="grow">防休眠</span>
     <label class="switch sm"><input type="checkbox" id="awakeSw"><span class="knob"></span></label>
   </div>
@@ -331,18 +332,22 @@
       <span class="grow">扬声器</span><span class="chev">▾</span>
     </div>
     <div class="children" id="spk">
-    <div class="child-row on-row"><span class="check" style="visibility:visible;color:var(--txt)">✓</span>
+    <div class="child-row">
       <span class="ic" style="width:13px;height:13px"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="2" width="14" height="20" rx="2.5"/></svg></span>
-      <span class="dev">MacBook Pro 扬声器</span><span class="tag">内建</span></div>
-    <div class="child-row"><span class="check" style="visibility:hidden">✓</span>
+      <span class="dev">MacBook Pro 扬声器</span><span class="tag">内建</span>
+      <label class="switch sm"><input type="checkbox" checked><span class="knob"></span></label></div>
+    <div class="child-row">
       <span class="ic" style="width:13px;height:13px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 4v16"/></svg></span>
-      <span class="dev" title="LG 29&quot; UltraWide 显示器音频">LG 29&quot; UltraW…音频</span><span class="tag">显示器</span></div>
-    <div class="child-row"><span class="check" style="visibility:hidden">✓</span>
+      <span class="dev" title="LG 29&quot; UltraWide 显示器音频">LG 29&quot; UltraW…音频</span><span class="tag">显示器</span>
+      <label class="switch sm"><input type="checkbox"><span class="knob"></span></label></div>
+    <div class="child-row">
       <span class="ic" style="width:13px;height:13px"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="2" width="14" height="20" rx="2.5"/></svg></span>
-      <span class="dev">iPad</span><span class="tag">隔空播放</span></div>
-    <div class="child-row"><span class="check" style="visibility:hidden">✓</span>
+      <span class="dev">iPad</span><span class="tag">隔空播放</span>
+      <label class="switch sm"><input type="checkbox"><span class="knob"></span></label></div>
+    <div class="child-row">
       <span class="ic" style="width:13px;height:13px"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v9a3 3 0 0 0 6 0V3a3 3 0 0 0-6 0Z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg></span>
-      <span class="dev">AirPods Pro</span><span class="tag">蓝牙</span></div>
+      <span class="dev">AirPods Pro</span><span class="tag">蓝牙</span>
+      <label class="switch sm"><input type="checkbox"><span class="knob"></span></label></div>
     </div>
   </div>
   <div class="expwrap">
@@ -351,8 +356,8 @@
       <span class="grow">麦克风</span><span class="chev">▾</span>
     </div>
     <div class="children" id="mic">
-      <div class="child-row on-row"><span class="check" style="visibility:visible;color:var(--txt)">✓</span><span class="dev">内建麦克风</span><span class="tag">内建</span></div>
-      <div class="child-row"><span class="check" style="visibility:hidden">✓</span><span class="dev">Shure MV7（USB）</span><span class="tag">USB</span></div>
+      <div class="child-row"><span class="dev">内建麦克风</span><span class="tag">内建</span><label class="switch sm"><input type="checkbox" checked><span class="knob"></span></label></div>
+      <div class="child-row"><span class="dev">Shure MV7（USB）</span><span class="tag">USB</span><label class="switch sm"><input type="checkbox"><span class="knob"></span></label></div>
       <div class="child-row" style="cursor:default">
         <span class="dev" style="color:var(--txt-faint)">输入电平</span>
         <span class="meter"><i class="lit"></i><i class="lit"></i><i class="lit"></i><i></i><i></i><i></i><i></i><i></i></span>
@@ -387,7 +392,10 @@
 
   <div class="item" id="openSettings">
     <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
-    <span class="grow">设置…</span><span class="shortcut">⌘,</span>
+    <span class="grow">设置</span><span class="shortcut">⌘,</span>
+  </div>
+  <div class="child-row" style="cursor:default;margin:0 6px;color:var(--txt-faint);border:none;background:none">
+    所有模块可随时加载或关闭
   </div>
   <div class="item">
     <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></span>
@@ -410,7 +418,7 @@
   </div>
   <div class="mod-row">
     <span class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 2c.6 4.2-1.8 7.8-5.2 10.2-.9.6-1.3 1.8-.7 2.8.5 1 1.7 1.3 2.7.9C12.6 13.6 15.8 8.6 14 3.4 13.7 2.5 12.8 2 12 2h-2Z"/><path d="M14.5 12.5c2.5-1 4.5.5 5.5 2.5 1 2-.5 4.5-2.5 5.5s-4.5.5-5.5-1.5" opacity=".5"/></svg></span>
-    <div class="grow"><div class="t">自适应显示</div><div class="s">播放器打开自动提亮，回桌面自动还原</div></div>
+    <div class="grow"><div class="t">观影模式</div><div class="s">看视频时自动提亮，离开自动还原</div></div>
     <label class="switch"><input type="checkbox" checked><span class="knob"></span></label>
   </div>
   <div class="mod-row">
@@ -420,7 +428,7 @@
   </div>
   <div class="mod-row">
     <span class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4.5 13.5H11L9.5 22 19 9.5h-6.5L13 2Z"/></svg></span>
-    <div class="grow"><div class="t">电源管理</div><div class="s">关闭屏幕 · 系统休眠 · 防休眠</div></div>
+    <div class="grow"><div class="t">电源管理</div><div class="s">屏幕休眠 · 系统休眠 · 防休眠</div></div>
     <label class="switch"><input type="checkbox" checked><span class="knob"></span></label>
   </div>
   <div class="mod-row">
@@ -475,13 +483,13 @@
       if(!wasOpen) wrap.classList.add('open');
     });
   });
-  // 子行点击互斥勾选（演示用）
+  // 子行开关：单选互斥（输出设备/旋转方向天然只有一个，开一个自动关其余）
   document.querySelectorAll('.children').forEach(group=>{
-    group.querySelectorAll('.on-row,.child-row').forEach(row=>{
-      row.addEventListener('click',()=>{
-        group.querySelectorAll('.check').forEach(c=>c.style.visibility='hidden');
-        const c=row.querySelector('.check');
-        if(c) c.style.visibility='visible';
+    group.querySelectorAll('input[type=checkbox]').forEach(sw=>{
+      sw.addEventListener('change',()=>{
+        if(sw.checked){
+          group.querySelectorAll('input[type=checkbox]').forEach(o=>{if(o!==sw)o.checked=false});
+        }
       });
     });
   });
