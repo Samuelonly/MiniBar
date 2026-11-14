@@ -9,7 +9,7 @@ final class MenuBarShell: NSObject {
     private var hudPanel: HUDMenuPanel?
 
     override init() {
-        modules = [DisplayModule(), AdaptiveModule(), StateModule(), PowerModule(), AudioModule(), StorageModule()]
+        modules = [DisplayModule(), StateModule(), PowerModule(), AudioModule(), StorageModule()]
         super.init()
     }
 

@@ -101,7 +101,6 @@ private struct ModuleRow: View {
 
 struct SettingsContent: View {
     @AppStorage("module.display") private var display = true
-    @AppStorage("module.adaptive") private var adaptive = true
     @AppStorage("module.state") private var state = true
     @AppStorage("module.power") private var power = true
     @AppStorage("module.audio") private var audio = true
@@ -208,44 +207,52 @@ struct SettingsContent: View {
             }
             Divider()
 
+            // PRD §10 文案纪律：功能说明置顶，用户语言，两行
+            VStack(alignment: .leading, spacing: 4) {
+                Text("开关打开立即生效，关闭立即停止工作。")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                Text("关闭的模块不驻留内存，零后台活动。")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
+            }
+
             Text("模块")
                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
                 .tracking(1.6)
                 .foregroundStyle(.tertiary)
 
             ModuleRow(icon: "sun.max", title: "显示控制",
-                      subtitle: "亮度 · 对比度 · 旋转（鼠标所在屏路由）", enabled: $display)
-            ModuleRow(icon: "wand.and.stars", title: "自适应显示",
-                      subtitle: "播放器打开自动提亮，回桌面自动还原", enabled: $adaptive)
-            ModuleRow(icon: "moon", title: "状态与色彩",
+                      subtitle: "亮度 · 对比度 · 旋转", enabled: $display)
+            ModuleRow(icon: "moon", title: "外观",
                       subtitle: "深色 · 夜览", enabled: $state)
             ModuleRow(icon: "bolt", title: "电源管理",
-                      subtitle: "关闭屏幕 · 系统休眠 · 防休眠", enabled: $power)
+                      subtitle: "屏幕休眠 · 系统休眠 · 防休眠", enabled: $power)
             ModuleRow(icon: "hifispeaker", title: "音频路由",
                       subtitle: "全局静音 · 扬声器/麦克风切换", enabled: $audio)
             ModuleRow(icon: "externaldrive", title: "存储管理",
                       subtitle: "逐盘安全弹出 · 重新挂载", enabled: $storage)
 
             Divider()
-            VStack(alignment: .leading, spacing: 6) {
-                Text("勾选即加载，取消即彻底销毁：零监听 · 零 Timer · 零唤醒。")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                HStack(spacing: 12) {
-                    Link("开发者 @Samuelonly",
-                         destination: URL(string: "https://github.com/Samuelonly")!)
-                        .font(.system(size: 10, design: .monospaced))
-                    Link("项目地址 Samuelonly/MiniBar",
-                         destination: URL(string: "https://github.com/Samuelonly/MiniBar")!)
-                        .font(.system(size: 10, design: .monospaced))
-                    Spacer()
-                    updateView
-                }
-                Text("v\(currentVersion) · 仅适配 macOS 15–27 · Apple Silicon")
+            HStack {
+                Text("v\(currentVersion)")
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.tertiary)
+                Spacer()
+                updateView
             }
-        }
+            HStack(spacing: 4) {
+                Spacer()
+                Link("@Samuelonly", destination: URL(string: "https://github.com/Samuelonly")!)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                Text("·").font(.system(size: 10)).foregroundStyle(.tertiary)
+                Link("github.com/Samuelonly/MiniBar",
+                     destination: URL(string: "https://github.com/Samuelonly/MiniBar")!)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
         .padding(.horizontal, 24)
         .padding(.top, 28)
         .padding(.bottom, 20)
@@ -255,4 +262,6 @@ struct SettingsContent: View {
             withAnimation(.easeOut(duration: 0.15)) { appeared = true }
         }
     }
+}
+
 }
