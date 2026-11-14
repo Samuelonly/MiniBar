@@ -125,6 +125,22 @@ final class DisplayModule: NSObject, MiniBarModule {
             minValue: 0, maxValue: 100,
             target: self, action: #selector(contrastChanged(_:)))
 
+        // PRD §12：异步回读 DDC 实时值，滑杆起步即真实状态（读不阻塞菜单展开）
+        if let endpoint = ddcEndpoint(for: screen), let transport = ddc {
+            let brightnessRef = brightness
+            let contrastRef = contrast
+            DispatchQueue.global(qos: .userInitiated).async {
+                if let reading = transport.read(endpoint, command: .brightness) {
+                    let value = Double(reading.current) / Double(max(reading.max, 1))
+                    DispatchQueue.main.async { brightnessRef.doubleValue = value }
+                }
+                if let reading = transport.read(endpoint, command: .contrast) {
+                    let value = Double(reading.current) / Double(max(reading.max, 1)) * 100
+                    DispatchQueue.main.async { contrastRef.doubleValue = value }
+                }
+            }
+        }
+
         return [sectionHeader("显示"),
                 label,
                 sliderRow("亮度", symbol: "sun.max", slider: brightness),

@@ -40,9 +40,39 @@ func iconView(_ symbol: String) -> NSImageView {
     return view
 }
 
+/// 悬停反馈行（PRD §12.1：悬停点亮 + Dock 式微放大，悬停反馈类克制动效）
+final class HoverCardView: NSView {
+    override func viewDidMoveToWindow() {
+        wantsLayer = true
+        guard window != nil else { return }
+        let tracking = NSTrackingArea(rect: bounds,
+                                      options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                                      owner: self)
+        addTrackingArea(tracking)
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.06).cgColor
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.12
+            context.allowsImplicitAnimation = true
+            layer?.setAffineTransform(CGAffineTransform(scaleX: 1.03, y: 1.03))
+        }
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        layer?.backgroundColor = NSColor.clear.cgColor
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.12
+            context.allowsImplicitAnimation = true
+            layer?.setAffineTransform(CGAffineTransform.identity)
+        }
+    }
+}
+
 /// 自定义 view 行（滑杆行/图标 Grid 行共用的容器）
 func menuRow(height: CGFloat, subviews: [NSView]) -> NSView {
-    let container = NSView(frame: NSRect(x: 0, y: 0, width: 280, height: height))
+    let container = HoverCardView(frame: NSRect(x: 0, y: 0, width: 280, height: height))
     let stack = NSStackView(views: subviews)
     stack.orientation = .horizontal
     stack.alignment = .centerY
