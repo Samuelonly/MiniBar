@@ -90,7 +90,7 @@ private struct ModuleRow: View {
                 .toggleStyle(.switch)
                 .controlSize(.small)
                 .onChange(of: enabled) { _, _ in
-                    NotificationCenter.default.post(name: .miniBarModulesChanged, object: nil)
+                    NotificationCenter.default.post(name: ModuleEvent.modulesChanged, object: nil)
                 }
         }
         .padding(.vertical, 3)

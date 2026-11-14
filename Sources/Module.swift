@@ -131,6 +131,12 @@ func runDetached(_ path: String, _ args: [String]) {
     try? process.run()
 }
 
-extension Notification.Name {
-    static let miniBarModulesChanged = Notification.Name("miniBarModulesChanged")
+/// 传达室事件总线（架构定稿）：
+/// 单进程，总线住在 MenuBarShell 里，模块只广播/订阅、互相不 import；
+/// 唯一外派进程是 caffeinate（哑巴工人，只干防休眠，永不兼职调度）。
+enum ModuleEvent {
+    /// DisplayModule 滑杆变化，userInfo["value"] = 新亮度 0~1（自适应模块据此同步基线）
+    static let sliderDidChange = Notification.Name("minibar.sliderDidChange")
+    /// 设置面板模块勾选变化（勾选即加载，取消即销毁）
+    static let modulesChanged = Notification.Name("minibar.modulesChanged")
 }

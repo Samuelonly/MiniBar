@@ -8,7 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         shell.install()
         NotificationCenter.default.addObserver(
             self, selector: #selector(modulesChanged),
-            name: .miniBarModulesChanged, object: nil)
+            name: ModuleEvent.modulesChanged, object: nil)
     }
 
     /// 懒人模块化：设置面板勾选变化 → 实时加载/销毁对应模块

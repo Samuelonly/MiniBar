@@ -69,6 +69,10 @@ final class DisplayModule: NSObject, MiniBarModule {
             IOObjectRelease(service)
         }
         UserDefaults.standard.set(sender.doubleValue, forKey: "display.brightness")
+        // 传达室广播：滑杆变了（自适应模块据此同步基线，修"基线过期"）
+        NotificationCenter.default.post(name: ModuleEvent.sliderDidChange,
+                                        object: nil,
+                                        userInfo: ["value": sender.doubleValue])
     }
 
     /// 对比度：DDC VCP 0x12（内置屏无软件对比度，静默忽略）

@@ -11,6 +11,7 @@ final class AdaptiveModule: NSObject, MiniBarModule {
     var name: String { "adaptive" }
 
     private var observer: NSObjectProtocol?
+    private var sliderObserver: NSObjectProtocol?
     private var endpoints: [DDCTransport.Endpoint] = []
     private var baseline: Double = 0.72
     private var appliedMedia = false
@@ -21,20 +22,28 @@ final class AdaptiveModule: NSObject, MiniBarModule {
     func activate() {
         guard observer == nil else { return }
         endpoints = DDCTransport.shared?.endpoints() ?? []
-        // 基线：激活时的当前亮度（TODO 1.0.1: 用户手动拖滑杆时同步基线）
+        // 基线：激活时的当前亮度
         baseline = UserDefaults.standard.object(forKey: "display.brightness") as? Double ?? 0.72
         observer = NotificationCenter.default.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
         ) { [weak self] _ in
             self?.applyForFrontmost()
         }
+        // 传达室订阅：用户手动拖滑杆 → 基线实时跟着走（修"基线过期"）
+        sliderObserver = NotificationCenter.default.addObserver(
+            forName: ModuleEvent.sliderDidChange, object: nil, queue: .main
+        ) { [weak self] note in
+            guard let value = note.userInfo?["value"] as? Double else { return }
+            self?.baseline = value
+        }
     }
 
     func deactivate() {
-        if let observer {
-            NotificationCenter.default.removeObserver(observer)
-            self.observer = nil
+        for item in [observer, sliderObserver].compactMap({ $0 }) {
+            NotificationCenter.default.removeObserver(item)
         }
+        observer = nil
+        sliderObserver = nil
         endpoints.removeAll()
         appliedMedia = false
     }
