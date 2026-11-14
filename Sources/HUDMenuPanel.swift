@@ -6,6 +6,8 @@ import AppKit
 /// NSMenu 仅作为数据模型存在，不再显示。
 final class HUDMenuPanel: NSPanel {
     static let width: CGFloat = 320
+    /// 行/hover/点击热区宽 = 面板宽 − 两侧安全区各 10pt（PRD §11 行内缩）
+    static let rowWidth: CGFloat = width - 20
 
     private var expandedIDs = Set<ObjectIdentifier>()
     private var monitors: [Any] = []
@@ -38,7 +40,8 @@ final class HUDMenuPanel: NSPanel {
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 1
-        stack.edgeInsets = NSEdgeInsets(top: 6, left: 6, bottom: 8, right: 6)
+        // PRD §11 行内缩安全区：面板两侧各留 10pt，行/hover/点击热区宽 = 面板宽 − 20
+        stack.edgeInsets = NSEdgeInsets(top: 6, left: 10, bottom: 8, right: 10)
         stack.translatesAutoresizingMaskIntoConstraints = false
         scroll.documentView = stack
 
@@ -171,7 +174,7 @@ final class HUDMenuPanel: NSPanel {
     // MARK: - 行构造
 
     private func rowBase(item: NSMenuItem, chevron: String?) -> HoverCardView {
-        let row = HoverCardView(frame: NSRect(x: 0, y: 0, width: HUDMenuPanel.width - 12, height: 26))
+        let row = HoverCardView(frame: NSRect(x: 0, y: 0, width: HUDMenuPanel.rowWidth, height: 26))
 
         let icon = NSImageView(image: item.image ?? NSImage())
         icon.contentTintColor = .secondaryLabelColor
@@ -241,7 +244,7 @@ final class HUDMenuPanel: NSPanel {
     }
 
     private func wrap(_ view: NSView) -> NSView {
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: HUDMenuPanel.width - 12, height: view.frame.height))
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: HUDMenuPanel.rowWidth, height: view.frame.height))
         view.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(view)
         NSLayoutConstraint.activate([
@@ -257,7 +260,7 @@ final class HUDMenuPanel: NSPanel {
         let label = NSTextField(labelWithString: title)
         label.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .semibold)
         label.textColor = .tertiaryLabelColor
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: HUDMenuPanel.width - 12, height: 22))
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: HUDMenuPanel.rowWidth, height: 22))
         label.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(label)
         NSLayoutConstraint.activate([
@@ -268,7 +271,7 @@ final class HUDMenuPanel: NSPanel {
     }
 
     private func divider() -> NSView {
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: HUDMenuPanel.width - 12, height: 1))
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: HUDMenuPanel.rowWidth, height: 1))
         view.wantsLayer = true
         view.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.08).cgColor
         return view

@@ -99,7 +99,7 @@ final class DisplayModule: NSObject, MiniBarModule {
         let screenName = screen?.localizedName ?? "显示器"
 
         let label = NSMenuItem(title: "", action: nil, keyEquivalent: "")
-        let labelField = NSTextField(labelWithString: "\(screenName) · 当前屏幕")
+        let labelField = NSTextField(labelWithString: screenName)
         labelField.font = NSFont.systemFont(ofSize: 11)
         labelField.textColor = .secondaryLabelColor
         labelField.lineBreakMode = .byTruncatingMiddle

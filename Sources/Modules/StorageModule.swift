@@ -8,8 +8,8 @@ final class StorageModule: NSObject, MiniBarModule {
     var name: String { "storage" }
 
     private var session: DASession?
-    /// 本会话内弹出的盘（BSD unit），供 ↻ 重新挂载
-    private var ejectedUnits: [String] = []
+    /// 本会话内弹出的盘（BSD unit + 盘名），供 ↻ 重新挂载；不向用户暴露 diskN 设备号
+    private var ejectedUnits: [(unit: String, name: String)] = []
 
     func activate() {
         if session == nil { session = DASessionCreate(kCFAllocatorDefault) }
@@ -59,7 +59,7 @@ final class StorageModule: NSObject, MiniBarModule {
         guard let path = sender.representedObject as? String else { return }
         if runCommand("/usr/sbin/diskutil", ["unmount", path]) == 0 {
             if let disk = mountedDisks().first(where: { $0.mountPath == path }) {
-                ejectedUnits.append(disk.unit)
+                ejectedUnits.append((disk.unit, disk.name))
             }
         } else {
             let alert = NSAlert()
@@ -72,7 +72,7 @@ final class StorageModule: NSObject, MiniBarModule {
     @objc private func ejectAllDisks() {
         for disk in mountedDisks() {
             if runCommand("/usr/sbin/diskutil", ["unmount", disk.mountPath]) == 0 {
-                ejectedUnits.append(disk.unit)
+                ejectedUnits.append((disk.unit, disk.name))
             }
         }
     }
@@ -82,7 +82,7 @@ final class StorageModule: NSObject, MiniBarModule {
     @objc private func mountDisk(_ sender: NSMenuItem) {
         guard let unit = sender.representedObject as? String else { return }
         runCommand("/usr/sbin/diskutil", ["mountDisk", "/dev/\(unit)"])
-        ejectedUnits.removeAll { $0 == unit }
+        ejectedUnits.removeAll { $0.unit == unit }
     }
 
     func menuSection() -> [NSMenuItem]? {
@@ -102,12 +102,12 @@ final class StorageModule: NSObject, MiniBarModule {
             items.append(item)
         }
 
-        for unit in ejectedUnits {
-            let item = NSMenuItem(title: "已弹出 · \(unit)",
+        for ejected in ejectedUnits {
+            let item = NSMenuItem(title: "已弹出 · \(ejected.name)",
                                   action: #selector(mountDisk(_:)), keyEquivalent: "")
             item.image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: "重新挂载")
             item.target = self
-            item.representedObject = unit
+            item.representedObject = ejected.unit
             item.toolTip = "重新挂载"
             items.append(item)
         }
