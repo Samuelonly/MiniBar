@@ -196,15 +196,11 @@ struct SettingsContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // 标题行：等宽大写 + 键帽（NIL 同款）
-            HStack {
-                Text("MINIBAR · 设置")
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .tracking(1.6)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Keycap(text: "⌘ ,")
-            }
+            // 标题行：等宽大写（NIL 同款）；不放键帽——面板是平的，无返回概念
+            Text("MINIBAR · 设置")
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .tracking(1.6)
+                .foregroundStyle(.secondary)
             Divider()
 
             // PRD §10 文案纪律：功能说明置顶，用户语言，两行
@@ -234,12 +230,15 @@ struct SettingsContent: View {
                       subtitle: "逐盘安全弹出 · 重新挂载", enabled: $storage)
 
             Divider()
-            HStack {
+            // 版本行：与底部 GitHub 行同款居中逻辑，`·` 间隔
+            HStack(spacing: 6) {
+                Spacer()
                 Text("v\(currentVersion)")
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.tertiary)
-                Spacer()
+                Text("·").font(.system(size: 10)).foregroundStyle(.tertiary)
                 updateView
+                Spacer()
             }
             HStack(spacing: 4) {
                 Spacer()
