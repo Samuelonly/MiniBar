@@ -4,7 +4,7 @@
 
 | PRD 模块 | 实现路径 | 参考项目（许可证） | 扒什么 |
 |---|---|---|---|
-| 外接屏 DDC 亮度/对比度 | IOKit `IODisplayConnect` + DDC/CI | [MonitorControl](https://github.com/MonitorControl/MonitorControl) (MIT) | DDC 通信层 `DDC.swift` 可整段搬 |
+| 外接屏 DDC 亮度/对比度 | IOKit `IOAVService` 私有 I2C（Apple Silicon） | **用户自己的 [BrightnessBar](https://github.com/Samuelonly/BrightnessBar)（已移植，源头是 MonitorControl MIT 路线）** | `DDCTransport.swift` 直接移植；MiniBar 新增 VCP 0x12 对比度（BrightnessBar 原版只有亮度 0x10） |
 | 外接屏 DDC（对照参考） | 同上 | [m1ddc](https://github.com/waydabber/m1ddc) (MIT) | 对照实现 |
 | ~~ddcctl~~ | — | [ddcctl](https://github.com/kfix/ddcctl) (**GPL-3.0**) | ⚠️ 只看思路，禁止搬运 |
 | 屏幕旋转（私有 API，已批准） | CoreDisplay CGS 私有接口 | [displayplacer](https://github.com/jakehilborn/displayplacer) (MIT) | 旋转/分辨率切换实现 |
