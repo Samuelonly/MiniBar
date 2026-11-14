@@ -129,26 +129,26 @@ struct SettingsContent: View {
     @ViewBuilder private var updateView: some View {
         switch updateStatus {
         case .idle:
-            Button("检查更新") { checkForUpdate() }
+            Button(L("settings.version.check")) { checkForUpdate() }
                 .font(.system(size: 10, design: .monospaced))
                 .buttonStyle(.link)
         case .checking:
-            Text("检查中…")
+            Text(L("settings.version.checking"))
                 .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(.tertiary)
         case .latest(let version):
-            Text("已是最新 v\(version)")
+            Text(String(format: L("settings.version.latest"), version))
                 .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(.secondary)
         case .available(let tag, let url):
-            Link("发现新版本 \(tag) ↗", destination: url)
+            Link(String(format: L("settings.version.available"), tag), destination: url)
                 .font(.system(size: 10, weight: .medium, design: .monospaced))
         case .noRelease:
-            Text("暂无 Release")
+            Text(L("settings.version.none"))
                 .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(.tertiary)
         case .networkError:
-            Button("网络不可达，重试") { checkForUpdate() }
+            Button(L("settings.version.retry")) { checkForUpdate() }
                 .font(.system(size: 10, design: .monospaced))
                 .buttonStyle(.link)
         }
@@ -197,7 +197,7 @@ struct SettingsContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             // 标题行：等宽大写（NIL 同款）；不放键帽——面板是平的，无返回概念
-            Text("MINIBAR · 设置")
+            Text(L("settings.title"))
                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
                 .tracking(1.6)
                 .foregroundStyle(.secondary)
@@ -205,29 +205,29 @@ struct SettingsContent: View {
 
             // PRD §10 文案纪律：功能说明置顶，用户语言，两行
             VStack(alignment: .leading, spacing: 4) {
-                Text("开关打开立即生效，关闭立即停止工作。")
+                Text(L("settings.note.effective"))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
-                Text("关闭的模块不驻留内存，零后台活动。")
+                Text(L("settings.note.noResident"))
                     .font(.system(size: 11))
                     .foregroundStyle(.tertiary)
             }
 
-            Text("模块")
+            Text(L("settings.section.modules"))
                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
                 .tracking(1.6)
                 .foregroundStyle(.tertiary)
 
-            ModuleRow(icon: "sun.max", title: "显示控制",
-                      subtitle: "亮度 · 对比度 · 旋转", enabled: $display)
-            ModuleRow(icon: "moon", title: "外观",
-                      subtitle: "深色 · 夜览", enabled: $state)
-            ModuleRow(icon: "bolt", title: "电源管理",
-                      subtitle: "屏幕休眠 · 系统休眠 · 防休眠", enabled: $power)
-            ModuleRow(icon: "hifispeaker", title: "音频路由",
-                      subtitle: "全局静音 · 扬声器/麦克风切换", enabled: $audio)
-            ModuleRow(icon: "externaldrive", title: "存储管理",
-                      subtitle: "逐盘安全弹出 · 重新挂载", enabled: $storage)
+            ModuleRow(icon: "sun.max", title: L("module.display.title"),
+                      subtitle: L("module.display.subtitle"), enabled: $display)
+            ModuleRow(icon: "moon", title: L("module.state.title"),
+                      subtitle: L("module.state.subtitle"), enabled: $state)
+            ModuleRow(icon: "bolt", title: L("module.power.title"),
+                      subtitle: L("module.power.subtitle"), enabled: $power)
+            ModuleRow(icon: "hifispeaker", title: L("module.audio.title"),
+                      subtitle: L("module.audio.subtitle"), enabled: $audio)
+            ModuleRow(icon: "externaldrive", title: L("module.storage.title"),
+                      subtitle: L("module.storage.subtitle"), enabled: $storage)
 
             Divider()
             // 版本行：与底部 GitHub 行同款居中逻辑，`·` 间隔

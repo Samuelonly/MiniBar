@@ -218,7 +218,8 @@
   }
   .p-foot .updbtn:hover{color:var(--txt)}
   .p-foot .ver{font-family:var(--mono);font-size:10px;color:var(--txt-faint)}
-  .p-foot .vrow{display:flex;align-items:center;margin-top:8px}
+  .p-foot .vrow{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px}
+  .p-foot .vrow .dot{color:var(--txt-faint);font-family:var(--mono);font-size:10px}
   .p-foot .vrow .ver{flex:1}
   .p-foot .centerline{margin-top:8px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--txt-faint)}
   .p-foot .centerline a{color:var(--txt-dim);margin:0 4px}
@@ -393,7 +394,7 @@
 
 <!-- ═══════════ 设置面板（点「设置…」弹出） ═══════════ -->
 <div class="panel settings hidden" id="settings">
-  <div class="p-head"><span class="t">MINIBAR · 设置</span><span class="key">⌘ ,</span></div>
+  <div class="p-head"><span class="t">MINIBAR · 设置</span></div>
   <div class="sep"></div>
   <div class="p-note">开关打开立即生效，关闭立即停止工作。</div>
   <div class="p-note">关闭的模块不驻留内存，零后台活动。</div>
@@ -427,8 +428,9 @@
 
   <div class="sep"></div>
   <div class="p-foot">
-    <div class="vrow">
+    <div class="vrow center">
       <span class="ver">v0.1.0</span>
+      <span class="dot">·</span>
       <button class="updbtn" id="updBtn">检查更新</button>
     </div>
     <div class="centerline">

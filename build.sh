@@ -24,6 +24,12 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>CFBundleName</key><string>MiniBar</string>
     <key>CFBundleShortVersionString</key><string>0.1.0</string>
     <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleDevelopmentRegion</key><string>zh-Hans</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>zh-Hans</string>
+        <string>en</string>
+    </array>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSAppleEventsUsageDescription</key>
@@ -31,6 +37,11 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 </dict>
 </plist>
 PLIST
+
+# i18n：语言资源进 bundle（先确保目标目录存在，否则 cp -R 会把 lproj 内容当 Resources）
+mkdir -p "$APP/Contents/Resources"
+cp -R Resources/zh-Hans.lproj "$APP/Contents/Resources/"
+cp -R Resources/en.lproj "$APP/Contents/Resources/"
 
 codesign --force --sign - "$APP" 2>/dev/null || true
 

@@ -1,0 +1,24 @@
+/* MiniBar · 简体中文 */
+
+"settings.title" = "MINIBAR · 设置";
+"settings.note.effective" = "开关打开立即生效，关闭立即停止工作。";
+"settings.note.noResident" = "关闭的模块不驻留内存，零后台活动。";
+"settings.section.modules" = "模块";
+
+"module.display.title" = "显示控制";
+"module.display.subtitle" = "亮度 · 对比度 · 旋转";
+"module.state.title" = "外观";
+"module.state.subtitle" = "深色 · 夜览";
+"module.power.title" = "电源管理";
+"module.power.subtitle" = "屏幕休眠 · 系统休眠 · 防休眠";
+"module.audio.title" = "音频路由";
+"module.audio.subtitle" = "全局静音 · 扬声器/麦克风切换";
+"module.storage.title" = "存储管理";
+"module.storage.subtitle" = "逐盘安全弹出 · 重新挂载";
+
+"settings.version.check" = "检查更新";
+"settings.version.latest" = "已是最新 v%@";
+"settings.version.available" = "发现新版本 %@ ↗";
+"settings.version.none" = "暂无 Release";
+"settings.version.retry" = "网络不可达，重试";
+"settings.version.checking" = "检查中…";

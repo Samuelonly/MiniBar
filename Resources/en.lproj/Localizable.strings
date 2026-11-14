@@ -1,0 +1,24 @@
+/* MiniBar · English */
+
+"settings.title" = "MINIBAR · SETTINGS";
+"settings.note.effective" = "Toggles apply instantly. Off means fully stopped.";
+"settings.note.noResident" = "Disabled modules leave no memory footprint, no background activity.";
+"settings.section.modules" = "MODULES";
+
+"module.display.title" = "Display";
+"module.display.subtitle" = "Brightness · Contrast · Rotation";
+"module.state.title" = "Appearance";
+"module.state.subtitle" = "Dark Mode · Night Shift";
+"module.power.title" = "Power";
+"module.power.subtitle" = "Display Sleep · System Sleep · Keep Awake";
+"module.audio.title" = "Audio";
+"module.audio.subtitle" = "Mute · Output/Microphone Switching";
+"module.storage.title" = "Storage";
+"module.storage.subtitle" = "Per-disk Safe Eject · Remount";
+
+"settings.version.check" = "Check for Updates";
+"settings.version.latest" = "Up to date v%@";
+"settings.version.available" = "New version %@ ↗";
+"settings.version.none" = "No releases yet";
+"settings.version.retry" = "Offline, tap to retry";
+"settings.version.checking" = "Checking…";
