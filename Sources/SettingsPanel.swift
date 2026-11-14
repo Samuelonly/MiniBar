@@ -109,6 +109,91 @@ struct SettingsContent: View {
     /// PRD §10：仅 0.15s 级微淡入
     @State private var appeared = false
 
+    // MARK: - 检查更新（GitHub Releases，零依赖）
+
+    private enum UpdateStatus {
+        case idle
+        case checking
+        case latest(String)
+        case available(String, URL)
+        case noRelease
+        case networkError
+    }
+
+    @State private var updateStatus: UpdateStatus = .idle
+
+    private var currentVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0"
+    }
+
+    @ViewBuilder private var updateView: some View {
+        switch updateStatus {
+        case .idle:
+            Button("检查更新") { checkForUpdate() }
+                .font(.system(size: 10, design: .monospaced))
+                .buttonStyle(.link)
+        case .checking:
+            Text("检查中…")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(.tertiary)
+        case .latest(let version):
+            Text("已是最新 v\(version)")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(.secondary)
+        case .available(let tag, let url):
+            Link("发现新版本 \(tag) ↗", destination: url)
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+        case .noRelease:
+            Text("暂无 Release")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(.tertiary)
+        case .networkError:
+            Button("网络不可达，重试") { checkForUpdate() }
+                .font(.system(size: 10, design: .monospaced))
+                .buttonStyle(.link)
+        }
+    }
+
+    private func checkForUpdate() {
+        updateStatus = .checking
+        Task {
+            var status = UpdateStatus.networkError
+            do {
+                var request = URLRequest(url: URL(string: "https://api.github.com/repos/Samuelonly/MiniBar/releases/latest")!)
+                request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+                request.timeoutInterval = 10
+                let (data, response) = try await URLSession.shared.data(for: request)
+                let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+                if statusCode == 404 {
+                    status = .noRelease
+                } else if statusCode == 200,
+                          let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                          let tag = json["tag_name"] as? String {
+                    let remote = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
+                    if isNewer(remote, than: currentVersion) {
+                        status = .available(tag, URL(string: "https://github.com/Samuelonly/MiniBar/releases/latest")!)
+                    } else {
+                        status = .latest(remote)
+                    }
+                }
+            } catch {
+                status = .networkError
+            }
+            await MainActor.run { updateStatus = status }
+        }
+    }
+
+    private func isNewer(_ candidate: String, than baseline: String) -> Bool {
+        let a = candidate.split(separator: ".").map { Int($0) ?? 0 }
+        let b = baseline.split(separator: ".").map { Int($0) ?? 0 }
+        for index in 0..<max(a.count, b.count) {
+            let left = index < a.count ? a[index] : 0
+            let right = index < b.count ? b[index] : 0
+            if left != right { return left > right }
+        }
+        return false
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             // 标题行：等宽大写 + 键帽（NIL 同款）
@@ -139,11 +224,21 @@ struct SettingsContent: View {
                       subtitle: "逐盘安全弹出 · 重新挂载", enabled: $storage)
 
             Divider()
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text("勾选即加载，取消即彻底销毁：零监听 · 零 Timer · 零唤醒。")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
-                Text("v0.1.0 · 仅适配 macOS 15–27 · Apple Silicon")
+                HStack(spacing: 12) {
+                    Link("开发者 @Samuelonly",
+                         destination: URL(string: "https://github.com/Samuelonly")!)
+                        .font(.system(size: 10, design: .monospaced))
+                    Link("项目地址 Samuelonly/MiniBar",
+                         destination: URL(string: "https://github.com/Samuelonly/MiniBar")!)
+                        .font(.system(size: 10, design: .monospaced))
+                    Spacer()
+                    updateView
+                }
+                Text("v\(currentVersion) · 仅适配 macOS 15–27 · Apple Silicon")
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.tertiary)
             }
