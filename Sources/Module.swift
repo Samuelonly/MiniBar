@@ -30,8 +30,11 @@ func menuItem(_ title: String, symbol: String, action: Selector? = nil, target: 
 }
 
 /// 节标题（等宽大写灰字，PRD §10 NIL 同款视觉）
+/// identifier 标记供自绘 HUD 渲染器识别节标题
 func sectionHeader(_ title: String) -> NSMenuItem {
-    NSMenuItem.sectionHeader(title: title)
+    let item = NSMenuItem.sectionHeader(title: title)
+    item.identifier = NSUserInterfaceItemIdentifier("minibar.sectionHeader")
+    return item
 }
 
 func iconView(_ symbol: String) -> NSImageView {
@@ -42,7 +45,14 @@ func iconView(_ symbol: String) -> NSImageView {
 
 /// 悬停反馈行（PRD §12.1 定稿：悬停点亮 + 柔和外阴影，不做缩放——
 /// 密排菜单里缩放是干扰项，阴影给"卡片浮起"的掌控感）
+/// 自绘菜单里兼任可点击行：onClick 由渲染器注入。
 final class HoverCardView: NSView {
+    var onClick: (() -> Void)?
+
+    override func mouseDown(with event: NSEvent) {
+        onClick?()
+    }
+
     override func viewDidMoveToWindow() {
         wantsLayer = true
         layer?.shadowColor = NSColor.black.cgColor

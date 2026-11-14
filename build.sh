@@ -10,11 +10,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 
 xcrun swiftc -swift-version 5 -O -sdk "$SDK" \
-    Sources/main.swift \
-    Sources/AppDelegate.swift \
-    Sources/Module.swift \
-    Sources/MenuBarShell.swift \
-    Sources/SettingsPanel.swift \
+    Sources/*.swift \
     Sources/Modules/*.swift \
     -o "$APP/Contents/MacOS/MiniBar"
 
