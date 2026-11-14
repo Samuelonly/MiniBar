@@ -10,7 +10,8 @@
 | 屏幕旋转（私有 API，已批准） | CoreDisplay CGS 私有接口 | [displayplacer](https://github.com/jakehilborn/displayplacer) (MIT) | 旋转/分辨率切换实现 |
 | 音频输入/输出切换、静音 | CoreAudio 公开 API | [switchaudio-osx](https://github.com/deweller/switchaudio-osx) (MIT，README 已确认) | 设备枚举+切换逻辑，翻 Swift 约 200 行 |
 | 深色模式（一次性授权，已批准） | osascript appearance preferences | [dark-mode](https://github.com/sindresorhus/dark-mode) (MIT) | osascript 调用方式 |
-| 夜览模式（私有 API，已批准） | CoreBrightness `CBBlueLightClient` | 无必抄项，公开资料多 | Shifty 路线 |
+| 夜览模式（私有 API，已批准） | CoreBrightness `CBBlueLightClient`（ObjC runtime） | [brightness-cli](https://github.com/giovacalle/brightness-cli) 的 NightShiftService 方法集 | getBlueLightStatus: 结构体首两字节 (active, enabled) + setEnabled:/setStrength:commit:；已实现 NightShiftController.swift |
+| 屏幕旋转（私有 API，已批准） | 私有 MonitorPanel 框架 `MPDisplay.setOrientation:` | [displayplacer](https://github.com/jakehilborn/displayplacer)（MIT）内嵌的 class-dump 头 | MPDisplay API 表；已实现 RotationController.swift（轮询等待硬件完成） |
 | 内置屏亮度 | `CGDisplaySetBrightness` 公开 API | 不需要 | 系统原生 |
 | 屏幕/系统休眠 | `pmset displaysleepnow` / `sleepnow` | 不需要 | `Process` 调用 |
 | 防休眠锁 | 独立 `caffeinate -i` 子进程 | 不需要 | App 退出后依然生效（符合 PRD 第 6 节） |

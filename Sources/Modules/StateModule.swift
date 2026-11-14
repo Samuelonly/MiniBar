@@ -2,9 +2,11 @@ import AppKit
 
 /// 状态与色彩模块（PRD §3.2）
 /// 深色模式走 osascript（一次性 Automation 授权已批准，PRD §9-2）；
-/// 夜览 TODO(1.0)：私有 CoreBrightness CBBlueLightClient（已批准，PRD §9-3）。
+/// 夜览走私有 CoreBrightness CBBlueLightClient（已批准，PRD §9-3）。
 final class StateModule: NSObject, MiniBarModule {
     var name: String { "state" }
+
+    private lazy var nightShift = NightShiftController()
 
     func activate() {}
     func deactivate() {}
@@ -23,7 +25,13 @@ final class StateModule: NSObject, MiniBarModule {
     }
 
     @objc private func toggleNight(_ sender: NSButton) {
-        sender.state = sender.state == .on ? .off : .on
+        guard let nightShift else {
+            sender.isEnabled = false
+            return
+        }
+        let target = !nightShift.isEnabled
+        nightShift.setEnabled(target)
+        sender.state = target ? .on : .off
     }
 
     func menuSection() -> [NSMenuItem]? {
@@ -45,6 +53,8 @@ final class StateModule: NSObject, MiniBarModule {
         night.font = NSFont.systemFont(ofSize: 11)
         night.image = NSImage(systemSymbolName: "moon", accessibilityDescription: nil)
         night.imagePosition = .imageLeading
+        night.state = (nightShift?.isEnabled ?? false) ? .on : .off
+        if nightShift == nil { night.isEnabled = false }
 
         let item = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         item.view = menuRow(height: 28, subviews: [dark, night])

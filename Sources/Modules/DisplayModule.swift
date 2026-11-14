@@ -78,10 +78,13 @@ final class DisplayModule: NSObject, MiniBarModule {
         UserDefaults.standard.set(sender.doubleValue, forKey: "display.contrast")
     }
 
-    /// TODO(1.0): 私有 CoreDisplay CGS 接口（已批准，PRD §9-3），参考 displayplacer
+    /// 旋转：横屏(0) ⇄ 竖屏(90)，走私有 MonitorPanel MPDisplay（PRD §9-3）
     @objc private func rotationChanged(_ sender: NSMenuItem) {
-        sender.menu?.items.forEach { $0.state = .off }
-        sender.state = .on
+        guard let screen = currentScreen(),
+              let displayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { return }
+        let target: Int32 = RotationController.shared.currentRotation(displayID) == 0 ? 90 : 0
+        guard RotationController.shared.rotate(displayID, to: target) else { return }
+        sender.menu?.items.forEach { $0.state = $0 === sender ? .on : .off }
     }
 
     func menuSection() -> [NSMenuItem]? {
@@ -100,10 +103,18 @@ final class DisplayModule: NSObject, MiniBarModule {
 
         let rotationMenu = NSMenu()
         rotationMenu.autoenablesItems = false
+        // 按当前鼠标屏实际旋转角勾选（PRD §3.1 横屏/竖屏切换）
+        var currentRotation: Int32 = 0
+        if let screen,
+           let displayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID {
+            currentRotation = RotationController.shared.currentRotation(displayID)
+        }
         rotationMenu.addItem(menuItem("横屏", symbol: "arrow.left.arrow.right",
-                                      action: #selector(rotationChanged(_:)), target: self, state: .on))
+                                      action: #selector(rotationChanged(_:)), target: self,
+                                      state: currentRotation == 0 ? .on : .off))
         rotationMenu.addItem(menuItem("竖屏", symbol: "arrow.up.arrow.down",
-                                      action: #selector(rotationChanged(_:)), target: self))
+                                      action: #selector(rotationChanged(_:)), target: self,
+                                      state: currentRotation != 0 ? .on : .off))
 
         let brightness = NSSlider(
             value: UserDefaults.standard.object(forKey: "display.brightness") as? Double ?? 0.72,
