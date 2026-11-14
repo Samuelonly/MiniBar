@@ -40,10 +40,15 @@ func iconView(_ symbol: String) -> NSImageView {
     return view
 }
 
-/// 悬停反馈行（PRD §12.1：悬停点亮 + Dock 式微放大，悬停反馈类克制动效）
+/// 悬停反馈行（PRD §12.1 定稿：悬停点亮 + 柔和外阴影，不做缩放——
+/// 密排菜单里缩放是干扰项，阴影给"卡片浮起"的掌控感）
 final class HoverCardView: NSView {
     override func viewDidMoveToWindow() {
         wantsLayer = true
+        layer?.shadowColor = NSColor.black.cgColor
+        layer?.shadowOffset = NSSize(width: 0, height: 1)
+        layer?.shadowOpacity = 0
+        layer?.masksToBounds = false
         guard window != nil else { return }
         let tracking = NSTrackingArea(rect: bounds,
                                       options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
@@ -52,20 +57,21 @@ final class HoverCardView: NSView {
     }
 
     override func mouseEntered(with event: NSEvent) {
-        layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.06).cgColor
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.12
             context.allowsImplicitAnimation = true
-            layer?.setAffineTransform(CGAffineTransform(scaleX: 1.03, y: 1.03))
+            layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.06).cgColor
+            layer?.shadowOpacity = 0.28
+            layer?.shadowRadius = 5
         }
     }
 
     override func mouseExited(with event: NSEvent) {
-        layer?.backgroundColor = NSColor.clear.cgColor
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.12
             context.allowsImplicitAnimation = true
-            layer?.setAffineTransform(CGAffineTransform.identity)
+            layer?.backgroundColor = NSColor.clear.cgColor
+            layer?.shadowOpacity = 0
         }
     }
 }

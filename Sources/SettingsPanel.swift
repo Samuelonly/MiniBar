@@ -6,7 +6,7 @@ import SwiftUI
 /// 等宽大写节标题 / 键帽 chip / 0.15s 微淡入，外观跟随系统深浅色。
 /// 纯 SwiftUI 勾选列表，勾选即实时生效（PRD §5），零 WebView。
 final class SettingsPanel: NSPanel {
-    static let size = NSSize(width: 380, height: 356)
+    static let size = NSSize(width: 380, height: 400)
 
     init() {
         super.init(contentRect: NSRect(x: 0, y: 0,
@@ -101,6 +101,7 @@ private struct ModuleRow: View {
 
 struct SettingsContent: View {
     @AppStorage("module.display") private var display = true
+    @AppStorage("module.adaptive") private var adaptive = true
     @AppStorage("module.state") private var state = true
     @AppStorage("module.power") private var power = true
     @AppStorage("module.audio") private var audio = true
@@ -214,6 +215,8 @@ struct SettingsContent: View {
 
             ModuleRow(icon: "sun.max", title: "显示控制",
                       subtitle: "亮度 · 对比度 · 旋转（鼠标所在屏路由）", enabled: $display)
+            ModuleRow(icon: "wand.and.stars", title: "自适应显示",
+                      subtitle: "播放器打开自动提亮，回桌面自动还原", enabled: $adaptive)
             ModuleRow(icon: "moon", title: "状态与色彩",
                       subtitle: "深色 · 夜览", enabled: $state)
             ModuleRow(icon: "bolt", title: "电源管理",

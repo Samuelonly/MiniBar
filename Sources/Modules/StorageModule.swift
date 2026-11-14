@@ -93,7 +93,9 @@ final class StorageModule: NSObject, MiniBarModule {
         for disk in mountedDisks() {
             let item = NSMenuItem(title: "\(disk.name) · \(formatter.string(fromByteCount: disk.size))",
                                   action: #selector(ejectDisk(_:)), keyEquivalent: "")
-            item.image = NSImage(systemSymbolName: "externaldrive", accessibilityDescription: nil)
+            // PRD §3.5：按设备身份选图标（iPhone/SSD/机械盘/通用外接盘）
+            item.image = NSImage(systemSymbolName: DeviceIcons.storage(name: disk.name),
+                                 accessibilityDescription: disk.name)
             item.target = self
             item.representedObject = disk.mountPath
             item.toolTip = "安全弹出（不断电，可随时重新挂载）"

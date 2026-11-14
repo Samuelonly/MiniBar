@@ -7,7 +7,7 @@ final class MenuBarShell: NSObject, NSMenuDelegate {
     private var statusItem: NSStatusItem?
 
     override init() {
-        modules = [DisplayModule(), StateModule(), PowerModule(), AudioModule(), StorageModule()]
+        modules = [DisplayModule(), AdaptiveModule(), StateModule(), PowerModule(), AudioModule(), StorageModule()]
         super.init()
     }
 

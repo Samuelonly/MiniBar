@@ -117,11 +117,15 @@ final class AudioModule: NSObject, MiniBarModule {
     }
 
     private func deviceSubmenu(_ devices: [AudioDeviceInfo], defaultID: AudioDeviceID,
-                               symbol: String, action: Selector) -> NSMenu? {
+                               input: Bool, action: Selector) -> NSMenu? {
         guard !devices.isEmpty else { return nil }
         let menu = NSMenu()
         menu.autoenablesItems = false
         for device in devices {
+            // PRD §3.4：设备图标按类型归类（iPad/蓝牙耳机/有线耳机/内建/HDMI/USB/隔空播放）
+            let symbol = input
+                ? DeviceIcons.audioInput(transport: device.transport, name: device.name)
+                : DeviceIcons.audioOutput(transport: device.transport, name: device.name)
             let item = menuItem("\(middleTruncate(device.name)) · \(device.transport)",
                                 symbol: symbol, action: action, target: self,
                                 state: device.id == defaultID ? .on : .off,
@@ -164,11 +168,11 @@ final class AudioModule: NSObject, MiniBarModule {
                               state: isMuted ? .on : .off)]
 
         if let speakers = deviceSubmenu(devices.filter(\.hasOutput), defaultID: outputDefault,
-                                        symbol: "hifispeaker", action: #selector(switchOutput(_:))) {
+                                        input: false, action: #selector(switchOutput(_:))) {
             items.append(menuItem("扬声器", symbol: "hifispeaker", submenu: speakers))
         }
         if let microphones = deviceSubmenu(devices.filter(\.hasInput), defaultID: inputDefault,
-                                           symbol: "mic", action: #selector(switchInput(_:))) {
+                                           input: true, action: #selector(switchInput(_:))) {
             items.append(menuItem("麦克风", symbol: "mic", submenu: microphones))
         }
         return items
