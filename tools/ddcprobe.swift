@@ -19,6 +19,9 @@ let create = unsafeBitCast(c, to: Create.self)
 let read = unsafeBitCast(r, to: Transfer.self)
 let write = unsafeBitCast(w, to: Transfer.self)
 
+// 实验模式：./ddcprobe exp → 向 0x14 写 0 观察画面，随后立刻写回原值
+let experiment = CommandLine.arguments.contains("exp")
+
 var iterator: io_iterator_t = 0
 guard IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching("DCPAVServiceProxy"), &iterator) == KERN_SUCCESS else {
     print("FATAL: enumeration failed"); exit(1)
@@ -149,6 +152,24 @@ while case let proxy = IOIteratorNext(iterator), proxy != 0 {
                     }
                     usleep(100_000)
                     print("    0x14 写通道验证（原值写回，零可见变化）: \(writeOK ? "写入完成，可再跑一次本工具确认值未漂移" : "✗ 写失败")")
+                    if experiment && writeOK {
+                        // 语义实验：写 0 → 读回 → 写回原值 → 复读
+                        var zero: [UInt8] = [0x84, 0x03, 0x14, 0, 0]
+                        zero.append(zero.reduce(UInt8(0x6E ^ 0x51), ^))
+                        let sent = zero.withUnsafeMutableBytes { raw in
+                            write(service, chip, 0x51, raw.baseAddress!, UInt32(raw.count)) == kIOReturnSuccess
+                        }
+                        usleep(300_000)
+                        print("    [实验] 已向 0x14 写入 0（\(sent ? "发送成功" : "发送失败")）——请观察屏幕画面模式是否变化")
+                        // 立刻恢复原值
+                        var back: [UInt8] = [0x84, 0x03, 0x14, UInt8(current >> 8), UInt8(current & 0xFF)]
+                        back.append(back.reduce(UInt8(0x6E ^ 0x51), ^))
+                        _ = back.withUnsafeMutableBytes { raw in
+                            write(service, chip, 0x51, raw.baseAddress!, UInt32(raw.count)) == kIOReturnSuccess
+                        }
+                        usleep(300_000)
+                        print("    [实验] 已写回原值 \(current)")
+                    }
                 }
             } else {
                 print(String(format: "    VCP 0x%02X (%@): ✗ 无回声", code, name))
