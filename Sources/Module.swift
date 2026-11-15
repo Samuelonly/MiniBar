@@ -110,7 +110,9 @@ final class SliderRowView: NSView {
         let label = NSTextField(labelWithString: title)
         label.font = NSFont.systemFont(ofSize: 12)
         label.textColor = .secondaryLabelColor
-        label.setContentHuggingPriority(.required, for: .horizontal)
+        label.alignment = .left
+        // 标签宽度锁死：亮度/对比度两条轨道同起点同长度（HTML .lbl 同逻辑）
+        label.widthAnchor.constraint(equalToConstant: 44).isActive = true
         slider.setContentHuggingPriority(.init(1), for: .horizontal)
         slider.setContentCompressionResistancePriority(.init(1), for: .horizontal)
 

@@ -50,32 +50,37 @@ final class HUDMenuPanel: NSPanel {
         let available = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let contentHeight = Self.contentHeight(menu: menu)
         let scrollable = contentHeight > available.height - 40
-        let height = scrollable ? (available.height - 40) : contentHeight
+        let height = min(contentHeight + 14, available.height - 40)
 
         var content = HUDMenuContent(menu: menu, scrollable: scrollable)
         content.onDismiss = { [weak self] in self?.dismiss() }
+        content.onHeightChange = { [weak self] h in self?.syncHeight(h) }
 
         let host = NSHostingView(rootView: content)
-        if scrollable {
-            // 内容超屏：固定高度 + 内部滚动（不自动改窗口尺寸）
-            host.frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: height)
-            host.sizingOptions = []
-        } else {
-            // 常规：窗口尺寸由 SwiftUI 内容驱动，展开 Block 时窗口自动长高
-            host.sizingOptions = [.minSize, .maxSize, .intrinsicContentSize]
-        }
+        host.frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: height)
         contentView = host
 
+        // 贴住状态栏：面板顶边 = 状态栏底边，无装饰缝
         var frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: height)
         if let buttonFrame {
             frame.origin.x = buttonFrame.midX - frame.width / 2
-            frame.origin.y = buttonFrame.minY - 6 - height
+            frame.origin.y = buttonFrame.minY - height
         }
         frame.origin.x = max(available.minX + 8, min(frame.origin.x, available.maxX - frame.width - 8))
-        if frame.origin.y < available.minY + 8 { frame.origin.y = available.minY + 8 }
         setFrame(frame, display: false)
         orderFrontRegardless()
         installMonitors()
+    }
+
+    /// 内容高度变化（Block 展开等）→ 窗口跟随，保持顶边贴住状态栏
+    func syncHeight(_ contentHeight: CGFloat) {
+        let available = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        let newHeight = min(contentHeight + 14, available.height - 40)
+        guard abs(newHeight - frame.height) > 2 else { return }
+        var frame = self.frame
+        frame.origin.y = frame.maxY - newHeight
+        frame.size.height = newHeight
+        setFrame(frame, display: true)
     }
 
     func dismiss() {
@@ -133,10 +138,14 @@ final class HUDMenuPanel: NSPanel {
 
 // MARK: - SwiftUI 内容（Section > Block > 行）
 
+
+// MARK: - SwiftUI 内容（Section > Block > 行）
+
 private struct HUDMenuContent: View {
     let menu: NSMenu
     let scrollable: Bool
     var onDismiss: (() -> Void)?
+    var onHeightChange: ((CGFloat) -> Void)?
 
     @State private var expandedBlockID: ObjectIdentifier?
     @State private var appeared = false
@@ -144,8 +153,7 @@ private struct HUDMenuContent: View {
     var hintText: String = ""
     var hintWarn = false
 
-    // MARK: 层级解析：Section > Block > 行
-
+    // 层级解析：Section > Block > 行
     private struct Block {
         let item: NSMenuItem
         let children: [NSMenuItem]
@@ -197,11 +205,20 @@ private struct HUDMenuContent: View {
         .onAppear {
             withAnimation(.easeOut(duration: 0.15)) { appeared = true }
         }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { h in
+            onHeightChange?(h)
+        }
     }
 
     @ViewBuilder private var core: some View {
         VStack(alignment: .leading, spacing: 1) {
-            ForEach(Array(sections.enumerated()), id: \.offset) { _, pair in
+            ForEach(Array(sections.enumerated()), id: \.offset) { index, pair in
+                if index > 0 {
+                    Rectangle().fill(Color.white.opacity(0.08))
+                        .frame(height: 1)
+                        .padding(.vertical, 5)
+                        .padding(.horizontal, 4)
+                }
                 if let title = pair.section.title {
                     sectionHeader(title)
                 }
@@ -225,8 +242,7 @@ private struct HUDMenuContent: View {
         })
     }
 
-    // MARK: - 行分发
-
+    // 行分发
     @ViewBuilder private func row(_ item: NSMenuItem) -> some View {
         if item.isSeparatorItem {
             Rectangle().fill(Color.white.opacity(0.08)).frame(height: 1)
@@ -262,11 +278,12 @@ private struct HUDMenuContent: View {
             .font(.system(size: 10, weight: .semibold, design: .monospaced))
             .tracking(1.6)
             .foregroundStyle(.tertiary)
-            .padding(.vertical, 4)
+            .padding(.top, 7)
+            .padding(.bottom, 3)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// Block 头：名称 + 向下箭头，点击就地展开/收起子行
+    // Block 头：名称 + 向下箭头，点击就地展开/收起子行
     @ViewBuilder private func blockHeader(_ item: NSMenuItem) -> some View {
         let expanded = expandedBlockID == ObjectIdentifier(item)
         Hoverable(content:
@@ -286,7 +303,7 @@ private struct HUDMenuContent: View {
         ) { expandedBlockID = expanded ? nil : ObjectIdentifier(item) }
     }
 
-    /// Block 子行：右侧开关，单选互斥（输出设备/旋转/画质模式天然只有一个）
+    // Block 子行：右侧开关，单选互斥
     @ViewBuilder private func childRow(_ child: NSMenuItem, siblings: [NSMenuItem]) -> some View {
         MenuSwitchRow(item: child,
                       hint: nil, hintWarn: false,
@@ -303,7 +320,7 @@ private struct HUDMenuContent: View {
 
 // MARK: - 行组件
 
-/// 悬停阻尼 + 点击
+// 悬停阻尼 + 点击
 private struct Hoverable<Content: View>: View {
     let content: Content
     var onClick: (() -> Void)?
@@ -323,7 +340,7 @@ private struct Hoverable<Content: View>: View {
     }
 }
 
-/// 开关行（菜单行真开关，PRD §3.6）
+// 开关行（菜单行真开关，PRD §3.6）
 private struct MenuSwitchRow: View {
     let item: NSMenuItem
     var hint: String?
@@ -370,7 +387,7 @@ private struct MenuSwitchRow: View {
     }
 }
 
-/// 普通动作行
+// 普通动作行
 private struct ActionRow: View {
     let item: NSMenuItem
     var hasHint: Bool
@@ -409,7 +426,7 @@ private struct ActionRow: View {
     }
 }
 
-/// 破坏性动作二段确认行（PRD §3.6）
+// 破坏性动作二段确认行（PRD §3.6）
 private struct ConfirmEjectAllRow: View {
     let item: NSMenuItem
     var onConfirmed: () -> Void
@@ -448,7 +465,7 @@ private struct ConfirmEjectAllRow: View {
     }
 }
 
-/// 嵌入模块申报的 AppKit 视图（滑杆行：滚轮+角标）
+// 嵌入模块申报的 AppKit 视图（滑杆行：滚轮+角标）
 private struct AppKitRow: NSViewRepresentable {
     let view: NSView
     func makeNSView(context: Context) -> NSView { view }
