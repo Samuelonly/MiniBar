@@ -1,13 +1,11 @@
 import AppKit
 import SwiftUI
 
-/// 自绘 HUD 菜单（1.0.2 渲染器 v3，层级定稿）：
-/// 层级关系 = Section > Block > 行。
-///   Section：6 个分区（节标题 + 分界线），永远完整呈现；
-///   Block：Section 内的可展开块（画质模式/扬声器/麦克风），展开 = 就地插入子行，手风琴单开；
-///   行：开关行 / 动作行 / 滑杆行。
-/// 模块仍以 NSMenu 树申报（menuSection() 零改动），SwiftUI 声明式渲染。
-/// NSMenu 仅作为数据模型存在，不再显示。
+/// 自绘 HUD 菜单（1.0.2 渲染器 v4，尺寸根治版）：
+/// 层级 = Section > Block > 行（Block 在 Section 内就地展开，手风琴单开）。
+/// 面板尺寸由 NSHostingView 的 intrinsicContentSize 直接驱动——窗口跟着内容自动长，
+/// 展开 Block 时自动变高，杜绝"只有一截"。内容超出屏幕时切换 ScrollView 滚动模式。
+/// 毛玻璃用 SwiftUI Material（.ultraThinMaterial），跟随系统外观。
 final class HUDMenuPanel: NSPanel {
     static let width: CGFloat = 320
 
@@ -30,37 +28,43 @@ final class HUDMenuPanel: NSPanel {
         isMovableByWindowBackground = false
     }
 
-    private func installContent(menu: NSMenu) {
-        let blur = NSVisualEffectView()
-        blur.material = .hudWindow
-        blur.blendingMode = .behindWindow
-        blur.state = .active
-        blur.frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: 120)
-        blur.autoresizingMask = [.width, .height]
+    // MARK: - 内容高度（行高全部固定值，可精确计算）
 
-        var content = HUDMenuContent(menu: menu)
-        content.onDismiss = { [weak self] in self?.dismiss() }
-        let host = NSHostingView(rootView: content)
-        host.frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: 120)
-        host.autoresizingMask = [.width, .height]
-        host.sizingOptions = [.minSize, .maxSize, .intrinsicContentSize]
+    private static func rowHeight(_ item: NSMenuItem) -> CGFloat {
+        if item.isSeparatorItem { return 1 }
+        if item.identifier?.rawValue == "minibar.sectionHeader" { return 21 }
+        if item.view != nil { return 30 }   // 滑杆行（AppKit）
+        return 26                            // 开关行 / 动作行 / Block 头 / Block 子行
+    }
 
-        let container = NSView(frame: blur.frame)
-        container.addSubview(blur)
-        container.addSubview(host)
-        contentView = container
+    static func contentHeight(menu: NSMenu) -> CGFloat {
+        var h: CGFloat = 12                  // 上下 padding 6+6
+        for item in menu.items { h += rowHeight(item) + 1 }
+        return h
     }
 
     // MARK: - 显示 / 收起
 
     func showUnderButton(_ buttonFrame: NSRect?) {
         guard let menu = shell?.buildMenuModel() else { return }
-        installContent(menu: menu)
-
         let available = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        contentView?.layoutSubtreeIfNeeded()
-        var height = min((contentView?.fittingSize.height ?? 200) + 2, available.height - 40)
-        height = max(height, 120)
+        let contentHeight = Self.contentHeight(menu: menu)
+        let scrollable = contentHeight > available.height - 40
+        let height = scrollable ? (available.height - 40) : contentHeight
+
+        var content = HUDMenuContent(menu: menu, scrollable: scrollable)
+        content.onDismiss = { [weak self] in self?.dismiss() }
+
+        let host = NSHostingView(rootView: content)
+        if scrollable {
+            // 内容超屏：固定高度 + 内部滚动（不自动改窗口尺寸）
+            host.frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: height)
+            host.sizingOptions = []
+        } else {
+            // 常规：窗口尺寸由 SwiftUI 内容驱动，展开 Block 时窗口自动长高
+            host.sizingOptions = [.minSize, .maxSize, .intrinsicContentSize]
+        }
+        contentView = host
 
         var frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: height)
         if let buttonFrame {
@@ -110,8 +114,7 @@ final class HUDMenuPanel: NSPanel {
                   let item = note.userInfo?["item"] as? NSMenuItem,
                   let text = note.userInfo?["text"] as? String else { return }
             let warn = (note.userInfo?["warn"] as? Bool) ?? false
-            guard let host = (contentView as? NSView)?.subviews
-                .compactMap({ $0 as? NSHostingView<HUDMenuContent> }).first else { return }
+            guard let host = contentView as? NSHostingView<HUDMenuContent> else { return }
             var root = host.rootView
             root.hintItem = ObjectIdentifier(item)
             root.hintText = text
@@ -132,6 +135,7 @@ final class HUDMenuPanel: NSPanel {
 
 private struct HUDMenuContent: View {
     let menu: NSMenu
+    let scrollable: Bool
     var onDismiss: (() -> Void)?
 
     @State private var expandedBlockID: ObjectIdentifier?
@@ -180,6 +184,22 @@ private struct HUDMenuContent: View {
     }
 
     var body: some View {
+        Group {
+            if scrollable {
+                ScrollView { core }
+            } else {
+                core
+            }
+        }
+        .frame(width: HUDMenuPanel.width)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .opacity(appeared ? 1 : 0)
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.15)) { appeared = true }
+        }
+    }
+
+    @ViewBuilder private var core: some View {
         VStack(alignment: .leading, spacing: 1) {
             ForEach(Array(sections.enumerated()), id: \.offset) { _, pair in
                 if let title = pair.section.title {
@@ -200,15 +220,9 @@ private struct HUDMenuContent: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .frame(width: HUDMenuPanel.width, alignment: .topLeading)
-        .opacity(appeared ? 1 : 0)
-        .onAppear {
-            withAnimation(.easeOut(duration: 0.15)) { appeared = true }
-        }
         .background(Color.clear.onTapGesture {
             expandedBlockID = nil   // 点面板内其他区域：Block 收起
         })
-        .animation(.easeOut(duration: 0.2), value: expandedBlockID)
     }
 
     // MARK: - 行分发
@@ -267,6 +281,7 @@ private struct HUDMenuContent: View {
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.tertiary)
                     .rotationEffect(.degrees(expanded ? 180 : 0))
+                    .animation(.easeOut(duration: 0.22), value: expanded)
             }
         ) { expandedBlockID = expanded ? nil : ObjectIdentifier(item) }
     }
