@@ -49,31 +49,32 @@ final class HUDMenuPanel: NSPanel {
     func showUnderButton(_ buttonFrame: NSRect?) {
         guard let menu = shell?.buildMenuModel() else { return }
         let available = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        let contentHeight = Self.contentHeight(menu: menu)
-        let scrollable = contentHeight > available.height - 40
-        let height = min(contentHeight + 14, available.height - 40)
+        let estimated = Self.contentHeight(menu: menu)
+        let scrollable = estimated > available.height - 40
+        statusBarBottom = buttonFrame?.minY
 
         var content = HUDMenuContent(menu: menu, scrollable: scrollable)
         content.onDismiss = { [weak self] in self?.dismiss() }
-        content.onHeightChange = { [weak self] h in self?.syncHeight(h) }
+        // 实测高度回调：窗口高度 = 实测内容高度，顶边钉死状态栏底边（不再手算）
+        content.onHeightChange = { [weak self] h in self?.pinTop(h) }
 
         let host = NSHostingView(rootView: content)
         if scrollable {
-            host.frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: height)
+            // 内容超屏：固定高度 + 内部滚动
+            host.frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: available.height - 40)
             host.sizingOptions = []
         } else {
-            // 常规：窗口高度由 SwiftUI 内容实际尺寸驱动，Block 展开时窗口自动长高
-            host.frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: height)
-            host.sizingOptions = [.minSize, .maxSize, .intrinsicContentSize]
+            // 常规：初始尺寸用估算值起画，随即被实测值纠正
+            host.frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: estimated)
+            host.sizingOptions = [.intrinsicContentSize]
         }
         contentView = host
 
-        // 贴住状态栏：面板顶边 = 状态栏底边，无装饰缝
-        statusBarBottom = buttonFrame?.minY
-        var frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: height)
+        var frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width,
+                           height: scrollable ? (available.height - 40) : estimated)
         if let buttonFrame {
             frame.origin.x = buttonFrame.midX - frame.width / 2
-            frame.origin.y = buttonFrame.minY - height
+            frame.origin.y = buttonFrame.minY - frame.height
         }
         frame.origin.x = max(available.minX + 8, min(frame.origin.x, available.maxX - frame.width - 8))
         setFrame(frame, display: false)
@@ -81,11 +82,13 @@ final class HUDMenuPanel: NSPanel {
         installMonitors()
     }
 
-    /// 内容高度变化（Block 展开等）→ 窗口跟随，顶边钉住状态栏底边
-    func syncHeight(_ contentHeight: CGFloat) {
+    /// 实测内容高度变化 → 窗口高度 = 实测值，顶边钉死状态栏底边
+    private func pinTop(_ contentHeight: CGFloat) {
         let available = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        let newHeight = min(contentHeight + 14, available.height - 40)
-        guard abs(newHeight - frame.height) > 2 else { return }
+        let scrollMode = (contentView as? NSHostingView<HUDMenuContent>)?.rootView.scrollable ?? false
+        if scrollMode { return } // 滚动模式高度固定
+        let newHeight = contentHeight
+        guard abs(newHeight - frame.height) > 1 else { return }
         var frame = self.frame
         frame.size.height = newHeight
         frame.origin.y = (statusBarBottom ?? frame.maxY) - newHeight

@@ -176,10 +176,35 @@ final class DisplayModule: NSObject, MiniBarModule {
 
         var items: [NSMenuItem] = [sectionHeader(L("menu.section.display"))]
 
-        // 每屏一个 Block（多屏接口）：MacBook + 两个外接屏 = 三个 Block，各自独立
+        // 多屏：每个屏幕一组（屏名文本行 + 滑杆直接可见），不用下拉折叠——滑杆永远一步可达
         for screen in NSScreen.screens {
             guard let displayID = displayID(screen) else { continue }
-            items.append(screenBlock(screen, displayID: displayID))
+
+            let nameRow = NSMenuItem(title: screen.localizedName, action: nil, keyEquivalent: "")
+            nameRow.image = NSImage(systemSymbolName: "display", accessibilityDescription: nil)
+            items.append(nameRow)
+
+            let brightness = NSSlider(
+                value: UserDefaults.standard.object(forKey: brightnessCacheKey(displayID)) as? Double ?? 0.72,
+                minValue: 0.05, maxValue: 1.0,
+                target: self, action: #selector(brightnessChanged(_:)))
+            brightness.identifier = NSUserInterfaceItemIdentifier(String(displayID))
+            let brightnessItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+            brightnessItem.view = SliderRowView(title: L("menu.display.brightness"), symbol: "sun.max",
+                                                slider: brightness, rowWidth: 308)
+            items.append(brightnessItem)
+
+            if ddcEndpoint(for: screen) != nil {
+                let contrast = NSSlider(
+                    value: UserDefaults.standard.object(forKey: contrastCacheKey(displayID)) as? Double ?? 50,
+                    minValue: 0, maxValue: 100,
+                    target: self, action: #selector(contrastChanged(_:)))
+                contrast.identifier = NSUserInterfaceItemIdentifier(String(displayID))
+                let contrastItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+                contrastItem.view = SliderRowView(title: L("menu.display.contrast"), symbol: "circle.lefthalf.filled",
+                                                  slider: contrast, rowWidth: 308)
+                items.append(contrastItem)
+            }
         }
 
         items.append(menuItem(L("menu.display.rotation"), symbol: "rotate.right",
@@ -187,36 +212,5 @@ final class DisplayModule: NSObject, MiniBarModule {
         items.append(menuItem(L("menu.display.pictureMode"), symbol: "paintpalette",
                               submenu: pictureModeMenu()))
         return items
-    }
-
-    /// 单屏 Block：亮度滑杆（内置屏）/ 亮度+对比度滑杆（外接屏）
-    private func screenBlock(_ screen: NSScreen, displayID: CGDirectDisplayID) -> NSMenuItem {
-        let submenu = NSMenu()
-        submenu.autoenablesItems = false
-
-        let brightness = NSSlider(
-            value: UserDefaults.standard.object(forKey: brightnessCacheKey(displayID)) as? Double ?? 0.72,
-            minValue: 0.05, maxValue: 1.0,
-            target: self, action: #selector(brightnessChanged(_:)))
-        brightness.identifier = NSUserInterfaceItemIdentifier(String(displayID))
-        let brightnessItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
-        brightnessItem.view = SliderRowView(title: L("menu.display.brightness"), symbol: "sun.max",
-                                            slider: brightness, rowWidth: 308)
-        submenu.addItem(brightnessItem)
-
-        let hasDDC = ddcEndpoint(for: screen) != nil
-        if hasDDC {
-            let contrast = NSSlider(
-                value: UserDefaults.standard.object(forKey: contrastCacheKey(displayID)) as? Double ?? 50,
-                minValue: 0, maxValue: 100,
-                target: self, action: #selector(contrastChanged(_:)))
-            contrast.identifier = NSUserInterfaceItemIdentifier(String(displayID))
-            let contrastItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
-            contrastItem.view = SliderRowView(title: L("menu.display.contrast"), symbol: "circle.lefthalf.filled",
-                                              slider: contrast, rowWidth: 308)
-            submenu.addItem(contrastItem)
-        }
-
-        return menuItem(screen.localizedName, symbol: "display", submenu: submenu)
     }
 }
