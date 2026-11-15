@@ -29,6 +29,19 @@ final class HUDMenuPanel: NSPanel {
         isMovableByWindowBackground = false
     }
 
+    // MARK: - 内容高度（行高全部固定值，可精确计算；Block 全折叠时即面板起步高度）
+
+    static func contentHeight(menu: NSMenu) -> CGFloat {
+        var h: CGFloat = 12                  // 上下 padding 6+6
+        for item in menu.items {
+            if item.isSeparatorItem { h += 11 + 1; continue }        // 分界线 1 + 上下 padding 5×2
+            if item.identifier?.rawValue == "minibar.sectionHeader" { h += 23 + 1; continue } // 13 + 7 + 3
+            if item.view != nil { h += 30 + 1; continue }            // 滑杆行
+            h += 26 + 1                                              // 开关/动作/Block 头/子行
+        }
+        return h
+    }
+
     // MARK: - 显示 / 收起
 
     func showUnderButton(_ buttonFrame: NSRect?) {
@@ -38,35 +51,37 @@ final class HUDMenuPanel: NSPanel {
 
         var content = HUDMenuContent(menu: menu, maxBodyHeight: available.height - 40)
         content.onDismiss = { [weak self] in self?.dismiss() }
-        content.onHeightChange = { [weak self] _ in self?.pinTop() }
+        // 量 core 本体（真实内容高度，不随视口提案缩水）→ 视口 = min(内容, 屏幕上限)
+        content.onHeightChange = { [weak self] h in self?.setViewportHeight(h) }
 
-        // 窗口尺寸 = SwiftUI 实测尺寸（intrinsic 驱动），不手算
         let host = NSHostingView(rootView: content)
-        host.sizingOptions = [.intrinsicContentSize]
+        // 起步高度用模型计算（Block 全折叠时精确）；ScrollView 被提案收缩是"细线"病根，禁止
+        let start = min(Self.contentHeight(menu: menu), available.height - 40)
+        host.frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: start)
+        host.sizingOptions = []
         contentView = host
 
-        var frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: 40)
+        var frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: start)
         if let buttonFrame {
             frame.origin.x = buttonFrame.midX - frame.width / 2
-            frame.origin.y = buttonFrame.minY - frame.height
+            frame.origin.y = buttonFrame.minY - start
         }
         frame.origin.x = max(available.minX + 8, min(frame.origin.x, available.maxX - frame.width - 8))
         setFrame(frame, display: false)
         orderFrontRegardless()
         installMonitors()
-        pinTop() // 立即按实测高度纠正一次位置
     }
 
-    /// 顶边钉死状态栏底边（高度由 intrinsic 驱动，这里只管位置）
-    private func pinTop() {
-        guard let bottom = statusBarBottom else { return }
+    /// 实测内容高度（含展开的 Block）→ 视口 = min(内容, 屏幕上限)，顶边钉死状态栏底边
+    func setViewportHeight(_ contentHeight: CGFloat) {
         let available = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        let viewport = min(contentHeight + 12, available.height - 40)
+        guard abs(viewport - frame.height) > 1 else { return }
         var frame = self.frame
-        frame.origin.y = bottom - frame.height
+        frame.size.height = viewport
+        frame.origin.y = (statusBarBottom ?? frame.maxY) - viewport
         if frame.origin.y < available.minY + 8 { frame.origin.y = available.minY + 8 }
-        if abs(frame.origin.y - self.frame.origin.y) > 0.5 {
-            setFrame(frame, display: true)
-        }
+        setFrame(frame, display: true)
     }
 
     func dismiss() {
@@ -176,7 +191,11 @@ private struct HUDMenuContent: View {
 
     var body: some View {
         ScrollView {
+            // 关键：量 core 本体（真实内容高度，不随视口提案缩水）——"细线"病根的根治点
             core
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { h in
+                    onHeightChange?(h)
+                }
         }
         .frame(width: HUDMenuPanel.width, alignment: .topLeading)
         .frame(maxHeight: maxBodyHeight)
@@ -184,9 +203,6 @@ private struct HUDMenuContent: View {
         .opacity(appeared ? 1 : 0)
         .onAppear {
             withAnimation(.easeOut(duration: 0.15)) { appeared = true }
-        }
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { h in
-            onHeightChange?(h)
         }
     }
 
