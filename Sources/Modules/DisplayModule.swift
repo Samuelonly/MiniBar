@@ -15,8 +15,26 @@ final class DisplayModule: NSObject, MiniBarModule {
     /// 菜单展开时刷新的 DDC 端点缓存，滑杆动作按屏幕身份匹配
     private var ddcEndpoints: [DDCTransport.Endpoint] = []
 
-    func activate() {}
-    func deactivate() { ddcEndpoints.removeAll() }
+    func activate() {
+        refreshPictureMode()
+    }
+
+    func deactivate() {
+        ddcEndpoints.removeAll()
+    }
+
+    /// 画质模式（VCP 0x14）异步回读：档位与当前值缓存，供菜单渲染
+    private func refreshPictureMode() {
+        DispatchQueue.global(qos: .utility).async {
+            guard let endpoints = DDCTransport.shared?.endpoints() else { return }
+            for endpoint in endpoints {
+                if let reading = DDCTransport.shared?.read(endpoint, command: .pictureMode) {
+                    UserDefaults.standard.set(Int(reading.current), forKey: "display.pictureMode")
+                    UserDefaults.standard.set(Int(reading.max), forKey: "display.pictureModeMax")
+                }
+            }
+        }
+    }
 
     /// 鼠标所在屏（PRD §3.1 多屏路由：拖拽即路由，无需手动选目标）
     private func currentScreen() -> NSScreen? {
@@ -91,6 +109,16 @@ final class DisplayModule: NSObject, MiniBarModule {
         sender.menu?.items.forEach { $0.state = $0 === sender ? .on : .off }
     }
 
+    /// 画质模式切换：写 0x14 原始档位值（精确写入，不做百分比换算）
+    @objc private func setPictureMode(_ sender: NSMenuItem) {
+        guard let value = sender.representedObject as? Int else { return }
+        guard let screen = currentScreen(), let endpoint = ddcEndpoint(for: screen) else { return }
+        if ddc?.writeRaw(endpoint, command: .pictureMode, raw: UInt16(value)) == true {
+            UserDefaults.standard.set(value, forKey: "display.pictureMode")
+            sender.state = .on
+        }
+    }
+
     func menuSection() -> [NSMenuItem]? {
         guard isEnabled(self) else { return nil }
         // 菜单展开时刷新 DDC 端点缓存（滑杆动作按当前鼠标屏匹配路由）
@@ -154,10 +182,26 @@ final class DisplayModule: NSObject, MiniBarModule {
         let contrastItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         contrastItem.view = contrastRow
 
+        // 画质模式：0x14 全档位露出（实际有几档显几档），单选互斥；档位名 OSD 不可读，暂以"模式 N"呈现
+        let modeMax = max(UserDefaults.standard.integer(forKey: "display.pictureModeMax"), 11)
+        let currentMode = UserDefaults.standard.integer(forKey: "display.pictureMode")
+        let pictureModeMenu = NSMenu()
+        pictureModeMenu.autoenablesItems = false
+        for value in 0...modeMax {
+            let modeItem = menuItem(String(format: L("menu.display.modeItem"), value + 1),
+                                    symbol: "",
+                                    action: #selector(setPictureMode(_:)), target: self,
+                                    state: currentMode == value ? .on : .off,
+                                    rep: value)
+            modeItem.toolTip = "VCP 0x14 = \(value)"
+            pictureModeMenu.addItem(modeItem)
+        }
+
         return [sectionHeader(L("menu.section.display")),
                 label,
                 brightnessItem,
                 contrastItem,
-                menuItem(L("menu.display.rotation"), symbol: "rotate.right", submenu: rotationMenu)]
+                menuItem(L("menu.display.rotation"), symbol: "rotate.right", submenu: rotationMenu),
+                menuItem(L("menu.display.pictureMode"), symbol: "paintpalette", submenu: pictureModeMenu)]
     }
 }

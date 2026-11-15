@@ -45,3 +45,6 @@
 "menu.hint.blockedByKeepAwake" = "⚠ Turn off Keep Awake first";
 "menu.settings" = "Settings";
 "menu.quit" = "Quit MiniBar";
+
+"menu.display.pictureMode" = "Picture Mode";
+"menu.display.modeItem" = "Mode %d";

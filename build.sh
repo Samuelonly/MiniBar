@@ -22,7 +22,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>CFBundleExecutable</key><string>MiniBar</string>
     <key>CFBundleIdentifier</key><string>com.samuelonly.MiniBar</string>
     <key>CFBundleName</key><string>MiniBar</string>
-    <key>CFBundleShortVersionString</key><string>0.1.1</string>
+    <key>CFBundleShortVersionString</key><string>0.1.2</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleDevelopmentRegion</key><string>zh-Hans</string>
     <key>CFBundleLocalizations</key>

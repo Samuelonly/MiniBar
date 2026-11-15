@@ -36,6 +36,7 @@ final class DDCTransport {
     enum Command: UInt8 {
         case brightness = 0x10
         case contrast = 0x12
+        case pictureMode = 0x14
     }
 
     private let queue = DispatchQueue(label: "minibar.ddc")
@@ -133,6 +134,34 @@ final class DDCTransport {
             let clamped = min(max(percent, 0), 1) * Double(maxValue)
             let value = UInt16(clamped.rounded())
             var packet = setPacket(command, value)
+            for _ in 0..<2 {
+                usleep(10_000)
+                let sent = packet.withUnsafeMutableBytes { raw -> Bool in
+                    guard let base = raw.baseAddress else { return false }
+                    return write(endpoint.service, endpoint.chip, 0x51, base, UInt32(raw.count)) == kIOReturnSuccess
+                }
+                if !sent { return false }
+            }
+            usleep(50_000)
+            return true
+        }
+    }
+
+    /// 离散码精确写入（如画质模式 0x14）：先读量程，再写入精确原始值（不做百分比换算）
+    func writeRaw(_ endpoint: Endpoint, command: Command, raw: UInt16) -> Bool {
+        return queue.sync {
+            let key = CacheKey(service: ObjectIdentifier(endpoint.service as AnyObject), command: command)
+            let maxValue: UInt16
+            if let cached = maxCache[key] {
+                maxValue = cached
+            } else if let (m, _) = readValue(endpoint, command: command, attempts: 2) {
+                maxCache[key] = m
+                maxValue = m
+            } else {
+                return false
+            }
+            guard raw <= maxValue else { return false }
+            var packet = setPacket(command, raw)
             for _ in 0..<2 {
                 usleep(10_000)
                 let sent = packet.withUnsafeMutableBytes { raw -> Bool in

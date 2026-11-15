@@ -45,3 +45,6 @@
 "menu.hint.blockedByKeepAwake" = "⚠ 请先关闭防休眠";
 "menu.settings" = "设置";
 "menu.quit" = "退出 MiniBar";
+
+"menu.display.pictureMode" = "画质模式";
+"menu.display.modeItem" = "模式 %d";
