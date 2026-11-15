@@ -23,22 +23,11 @@ final class SettingsPanel: NSPanel {
         level = .floating
         isMovableByWindowBackground = true
 
-        let blur = NSVisualEffectView()
-        blur.material = .hudWindow
-        blur.blendingMode = .behindWindow
-        blur.state = .active
-
-        let content = NSView(frame: NSRect(x: 0, y: 0,
-                                           width: SettingsPanel.size.width,
-                                           height: SettingsPanel.size.height))
-        blur.frame = content.bounds
-        blur.autoresizingMask = [.width, .height]
+        // 窗口尺寸 = SwiftUI 内容实测尺寸（intrinsic 驱动），底部不再被裁
         let host = NSHostingView(rootView: SettingsContent())
-        host.frame = content.bounds
-        host.autoresizingMask = [.width, .height]
-        content.addSubview(blur)
-        content.addSubview(host)
-        contentView = content
+        host.frame = NSRect(x: 0, y: 0, width: SettingsPanel.size.width, height: 120)
+        host.sizingOptions = [.intrinsicContentSize]
+        contentView = host
         center()
     }
 
@@ -256,7 +245,8 @@ struct SettingsContent: View {
         .padding(.horizontal, 24)
         .padding(.top, 28)
         .padding(.bottom, 20)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: SettingsPanel.size.width, alignment: .leading)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
         .opacity(appeared ? 1 : 0)
         .onAppear {
             withAnimation(.easeOut(duration: 0.15)) { appeared = true }

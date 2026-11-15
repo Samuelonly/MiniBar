@@ -1,11 +1,11 @@
 import AppKit
 import SwiftUI
 
-/// 自绘 HUD 菜单（1.0.2 渲染器 v4，尺寸根治版）：
+/// 自绘 HUD 菜单（1.0.2 渲染器 v5，尺寸根治版）：
 /// 层级 = Section > Block > 行（Block 在 Section 内就地展开，手风琴单开）。
-/// 面板尺寸由 NSHostingView 的 intrinsicContentSize 直接驱动——窗口跟着内容自动长，
-/// 展开 Block 时自动变高，杜绝"只有一截"。内容超出屏幕时切换 ScrollView 滚动模式。
-/// 毛玻璃用 SwiftUI Material（.ultraThinMaterial），跟随系统外观。
+/// 尺寸规则：**窗口高度 = SwiftUI 实测高度**（intrinsicContentSize 驱动），
+/// 内容超出屏幕时切换 ScrollView 滚动模式。顶边始终钉住状态栏底边。
+/// 毛玻璃用 SwiftUI Material，跟随系统外观。
 final class HUDMenuPanel: NSPanel {
     static let width: CGFloat = 320
 
@@ -29,49 +29,23 @@ final class HUDMenuPanel: NSPanel {
         isMovableByWindowBackground = false
     }
 
-    // MARK: - 内容高度（行高全部固定值，可精确计算）
-
-    private static func rowHeight(_ item: NSMenuItem) -> CGFloat {
-        if item.isSeparatorItem { return 1 }
-        if item.identifier?.rawValue == "minibar.sectionHeader" { return 21 }
-        if item.view != nil { return 30 }   // 滑杆行（AppKit）
-        return 26                            // 开关行 / 动作行 / Block 头 / Block 子行
-    }
-
-    static func contentHeight(menu: NSMenu) -> CGFloat {
-        var h: CGFloat = 12                  // 上下 padding 6+6
-        for item in menu.items { h += rowHeight(item) + 1 }
-        return h
-    }
-
     // MARK: - 显示 / 收起
 
     func showUnderButton(_ buttonFrame: NSRect?) {
         guard let menu = shell?.buildMenuModel() else { return }
         let available = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        let estimated = Self.contentHeight(menu: menu)
-        let scrollable = estimated > available.height - 40
         statusBarBottom = buttonFrame?.minY
 
-        var content = HUDMenuContent(menu: menu, scrollable: scrollable)
+        var content = HUDMenuContent(menu: menu, maxBodyHeight: available.height - 40)
         content.onDismiss = { [weak self] in self?.dismiss() }
-        // 实测高度回调：窗口高度 = 实测内容高度，顶边钉死状态栏底边（不再手算）
-        content.onHeightChange = { [weak self] h in self?.pinTop(h) }
+        content.onHeightChange = { [weak self] _ in self?.pinTop() }
 
+        // 窗口尺寸 = SwiftUI 实测尺寸（intrinsic 驱动），不手算
         let host = NSHostingView(rootView: content)
-        if scrollable {
-            // 内容超屏：固定高度 + 内部滚动
-            host.frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: available.height - 40)
-            host.sizingOptions = []
-        } else {
-            // 常规：初始尺寸用估算值起画，随即被实测值纠正
-            host.frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: estimated)
-            host.sizingOptions = [.intrinsicContentSize]
-        }
+        host.sizingOptions = [.intrinsicContentSize]
         contentView = host
 
-        var frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width,
-                           height: scrollable ? (available.height - 40) : estimated)
+        var frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: 40)
         if let buttonFrame {
             frame.origin.x = buttonFrame.midX - frame.width / 2
             frame.origin.y = buttonFrame.minY - frame.height
@@ -80,20 +54,19 @@ final class HUDMenuPanel: NSPanel {
         setFrame(frame, display: false)
         orderFrontRegardless()
         installMonitors()
+        pinTop() // 立即按实测高度纠正一次位置
     }
 
-    /// 实测内容高度变化 → 窗口高度 = 实测值，顶边钉死状态栏底边
-    private func pinTop(_ contentHeight: CGFloat) {
+    /// 顶边钉死状态栏底边（高度由 intrinsic 驱动，这里只管位置）
+    private func pinTop() {
+        guard let bottom = statusBarBottom else { return }
         let available = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        let scrollMode = (contentView as? NSHostingView<HUDMenuContent>)?.rootView.scrollable ?? false
-        if scrollMode { return } // 滚动模式高度固定
-        let newHeight = contentHeight
-        guard abs(newHeight - frame.height) > 1 else { return }
         var frame = self.frame
-        frame.size.height = newHeight
-        frame.origin.y = (statusBarBottom ?? frame.maxY) - newHeight
+        frame.origin.y = bottom - frame.height
         if frame.origin.y < available.minY + 8 { frame.origin.y = available.minY + 8 }
-        setFrame(frame, display: true)
+        if abs(frame.origin.y - self.frame.origin.y) > 0.5 {
+            setFrame(frame, display: true)
+        }
     }
 
     func dismiss() {
@@ -151,12 +124,9 @@ final class HUDMenuPanel: NSPanel {
 
 // MARK: - SwiftUI 内容（Section > Block > 行）
 
-
-// MARK: - SwiftUI 内容（Section > Block > 行）
-
 private struct HUDMenuContent: View {
     let menu: NSMenu
-    let scrollable: Bool
+    let maxBodyHeight: CGFloat
     var onDismiss: (() -> Void)?
     var onHeightChange: ((CGFloat) -> Void)?
 
@@ -205,14 +175,11 @@ private struct HUDMenuContent: View {
     }
 
     var body: some View {
-        Group {
-            if scrollable {
-                ScrollView { core }
-            } else {
-                core
-            }
+        ScrollView {
+            core
         }
-        .frame(width: HUDMenuPanel.width)
+        .frame(width: HUDMenuPanel.width, alignment: .topLeading)
+        .frame(maxHeight: maxBodyHeight)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
         .opacity(appeared ? 1 : 0)
         .onAppear {
@@ -260,7 +227,7 @@ private struct HUDMenuContent: View {
         if item.isSeparatorItem {
             Rectangle().fill(Color.white.opacity(0.08)).frame(height: 1)
         } else if item.view != nil {
-            AppKitRow(view: item.view!)
+            AppKitRow(view: item.view!).frame(height: 30)
         } else if item.identifier?.rawValue == "minibar.confirmEjectAll" {
             ConfirmEjectAllRow(item: item) { onDismiss?() }
         } else if item.identifier?.rawValue == "minibar.switch" {
@@ -316,7 +283,7 @@ private struct HUDMenuContent: View {
         ) { expandedBlockID = expanded ? nil : ObjectIdentifier(item) }
     }
 
-    // Block 子行：右侧开关，单选互斥
+    // Block 子行：右侧开关，单选互斥（输出设备/旋转/画质模式天然只有一个）
     @ViewBuilder private func childRow(_ child: NSMenuItem, siblings: [NSMenuItem]) -> some View {
         MenuSwitchRow(item: child,
                       hint: nil, hintWarn: false,
@@ -353,7 +320,7 @@ private struct Hoverable<Content: View>: View {
     }
 }
 
-// 开关行（菜单行真开关，PRD §3.6）
+// 开关行（菜单行真开关 + 图标双态回读，PRD §3.6）
 private struct MenuSwitchRow: View {
     let item: NSMenuItem
     var hint: String?
@@ -361,7 +328,6 @@ private struct MenuSwitchRow: View {
     var onFlip: (Bool) -> Void
 
     @State private var isOn: Bool
-    // 图标双态：翻转后从模块回读 item.image（如静音喇叭 ↔ 斜线喇叭）
     @State private var iconImage: NSImage?
 
     init(item: NSMenuItem, hint: String?, hintWarn: Bool, onFlip: @escaping (Bool) -> Void) {
@@ -398,7 +364,7 @@ private struct MenuSwitchRow: View {
                     .controlSize(.small)
                     .onChange(of: isOn) { _, newValue in
                         onFlip(newValue)
-                        // 模块可能在响应里换图标（静音双态），回读同步
+                        // 模块可能在响应里换图标（静音喇叭 ↔ 斜线喇叭），回读同步
                         iconImage = item.image
                     }
             }
