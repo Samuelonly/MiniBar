@@ -22,3 +22,26 @@
 "settings.version.none" = "No releases yet";
 "settings.version.retry" = "Offline, tap to retry";
 "settings.version.checking" = "Checking…";
+
+"menu.section.display" = "DISPLAY";
+"menu.display.brightness" = "Brightness";
+"menu.display.contrast" = "Contrast";
+"menu.display.rotation" = "Rotation";
+"menu.rotation.landscape" = "Landscape";
+"menu.rotation.portrait" = "Portrait";
+"menu.section.appearance" = "APPEARANCE";
+"menu.section.power" = "POWER";
+"menu.power.screenSleep" = "Display Sleep";
+"menu.power.systemSleep" = "System Sleep";
+"menu.power.keepAwake" = "Keep Awake";
+"menu.section.audio" = "AUDIO";
+"menu.audio.mute" = "Mute All";
+"menu.audio.speakers" = "Speakers";
+"menu.audio.microphones" = "Microphones";
+"menu.section.storage" = "STORAGE";
+"menu.storage.ejectAll" = "Safe Eject All";
+"menu.storage.ejectAllConfirm" = "Eject all — confirm?";
+"menu.storage.empty" = "No external drives";
+"menu.hint.blockedByKeepAwake" = "⚠ Turn off Keep Awake first";
+"menu.settings" = "Settings";
+"menu.quit" = "Quit MiniBar";

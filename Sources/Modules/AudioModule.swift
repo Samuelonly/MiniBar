@@ -162,18 +162,20 @@ final class AudioModule: NSObject, MiniBarModule {
         let outputDefault = defaultDeviceID(kAudioHardwarePropertyDefaultOutputDevice)
         let inputDefault = defaultDeviceID(kAudioHardwarePropertyDefaultInputDevice)
 
-        var items = [sectionHeader("音频"),
-                     menuItem("全局静音", symbol: "speaker.slash",
-                              action: #selector(toggleMute(_:)), target: self,
-                              state: isMuted ? .on : .off)]
+        var items = [sectionHeader(L("menu.section.audio"))]
+        let mute = menuItem(L("menu.audio.mute"), symbol: "speaker.slash",
+                            action: #selector(toggleMute(_:)), target: self,
+                            state: isMuted ? .on : .off)
+        mute.identifier = NSUserInterfaceItemIdentifier("minibar.switch")
+        items.append(mute)
 
         if let speakers = deviceSubmenu(devices.filter(\.hasOutput), defaultID: outputDefault,
                                         input: false, action: #selector(switchOutput(_:))) {
-            items.append(menuItem("扬声器", symbol: "hifispeaker", submenu: speakers))
+            items.append(menuItem(L("menu.audio.speakers"), symbol: "hifispeaker", submenu: speakers))
         }
         if let microphones = deviceSubmenu(devices.filter(\.hasInput), defaultID: inputDefault,
                                            input: true, action: #selector(switchInput(_:))) {
-            items.append(menuItem("麦克风", symbol: "mic", submenu: microphones))
+            items.append(menuItem(L("menu.audio.microphones"), symbol: "mic", submenu: microphones))
         }
         return items
     }

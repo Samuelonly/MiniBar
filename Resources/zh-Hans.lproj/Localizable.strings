@@ -22,3 +22,26 @@
 "settings.version.none" = "暂无 Release";
 "settings.version.retry" = "网络不可达，重试";
 "settings.version.checking" = "检查中…";
+
+"menu.section.display" = "显示";
+"menu.display.brightness" = "亮度";
+"menu.display.contrast" = "对比度";
+"menu.display.rotation" = "旋转方向";
+"menu.rotation.landscape" = "横屏";
+"menu.rotation.portrait" = "竖屏";
+"menu.section.appearance" = "外观";
+"menu.section.power" = "电源";
+"menu.power.screenSleep" = "屏幕休眠";
+"menu.power.systemSleep" = "系统休眠";
+"menu.power.keepAwake" = "防休眠";
+"menu.section.audio" = "音频";
+"menu.audio.mute" = "全局静音";
+"menu.audio.speakers" = "扬声器";
+"menu.audio.microphones" = "麦克风";
+"menu.section.storage" = "存储";
+"menu.storage.ejectAll" = "安全弹出全部";
+"menu.storage.ejectAllConfirm" = "确认弹出全部？";
+"menu.storage.empty" = "没有外接硬盘";
+"menu.hint.blockedByKeepAwake" = "⚠ 请先关闭防休眠";
+"menu.settings" = "设置";
+"menu.quit" = "退出 MiniBar";

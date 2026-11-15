@@ -113,10 +113,10 @@ final class DisplayModule: NSObject, MiniBarModule {
            let displayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID {
             currentRotation = RotationController.shared.currentRotation(displayID)
         }
-        rotationMenu.addItem(menuItem("横屏", symbol: "arrow.left.arrow.right",
+        rotationMenu.addItem(menuItem(L("menu.rotation.landscape"), symbol: "arrow.left.arrow.right",
                                       action: #selector(rotationChanged(_:)), target: self,
                                       state: currentRotation == 0 ? .on : .off))
-        rotationMenu.addItem(menuItem("竖屏", symbol: "arrow.up.arrow.down",
+        rotationMenu.addItem(menuItem(L("menu.rotation.portrait"), symbol: "arrow.up.arrow.down",
                                       action: #selector(rotationChanged(_:)), target: self,
                                       state: currentRotation != 0 ? .on : .off))
 
@@ -145,10 +145,19 @@ final class DisplayModule: NSObject, MiniBarModule {
             }
         }
 
-        return [sectionHeader("显示"),
+        let brightnessRow = SliderRowView(title: L("menu.display.brightness"), symbol: "sun.max",
+                                          slider: brightness, rowWidth: HUDMenuPanel.rowWidth)
+        let contrastRow = SliderRowView(title: L("menu.display.contrast"), symbol: "circle.lefthalf.filled",
+                                        slider: contrast, rowWidth: HUDMenuPanel.rowWidth)
+        let brightnessItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        brightnessItem.view = brightnessRow
+        let contrastItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        contrastItem.view = contrastRow
+
+        return [sectionHeader(L("menu.section.display")),
                 label,
-                sliderRow("亮度", symbol: "sun.max", slider: brightness),
-                sliderRow("对比度", symbol: "circle.lefthalf.filled", slider: contrast),
-                menuItem("旋转方向", symbol: "rotate.right", submenu: rotationMenu)]
+                brightnessItem,
+                contrastItem,
+                menuItem(L("menu.display.rotation"), symbol: "rotate.right", submenu: rotationMenu)]
     }
 }

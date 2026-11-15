@@ -59,6 +59,6 @@ final class StateModule: NSObject, MiniBarModule {
         let item = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         item.view = menuRow(height: 28, subviews: [dark, night])
 
-        return [sectionHeader("状态"), item]
+        return [sectionHeader(L("menu.section.appearance")), item]
     }
 }

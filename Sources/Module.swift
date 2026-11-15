@@ -67,21 +67,94 @@ final class HoverCardView: NSView {
     }
 
     override func mouseEntered(with event: NSEvent) {
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.12
-            context.allowsImplicitAnimation = true
-            layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.06).cgColor
-            layer?.shadowOpacity = 0.28
-            layer?.shadowRadius = 5
-        }
+        // PRD §12.1 阻尼：慢减速曲线（吧嗒吧嗒的机械质感）
+        CATransaction.begin()
+        CATransaction.setAnimationDuration(0.22)
+        CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(controlPoints: 0.22, 0.61, 0.36, 1))
+        layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.06).cgColor
+        layer?.shadowOpacity = 0.28
+        layer?.shadowRadius = 5
+        CATransaction.commit()
     }
 
     override func mouseExited(with event: NSEvent) {
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.12
-            context.allowsImplicitAnimation = true
-            layer?.backgroundColor = NSColor.clear.cgColor
-            layer?.shadowOpacity = 0
+        CATransaction.begin()
+        CATransaction.setAnimationDuration(0.22)
+        CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(controlPoints: 0.22, 0.61, 0.36, 1))
+        layer?.backgroundColor = NSColor.clear.cgColor
+        layer?.shadowOpacity = 0
+        CATransaction.commit()
+    }
+}
+
+/// 滑杆行（PRD §3.1 定稿）：滚轮上=减(向左)、下=增(向右)；数值角标拖动/滚动时浮现、停手即隐
+final class SliderRowView: NSView {
+    private let slider: NSSlider
+    private let valueTag: NSTextField
+    private var hideTimer: Timer?
+
+    init(title: String, symbol: String, slider: NSSlider, rowWidth: CGFloat) {
+        self.slider = slider
+        valueTag = NSTextField(labelWithString: "")
+        valueTag.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .medium)
+        valueTag.textColor = .white
+        valueTag.wantsLayer = true
+        valueTag.layer?.backgroundColor = NSColor(red: 0.30, green: 0.61, blue: 1.0, alpha: 1).cgColor
+        valueTag.layer?.cornerRadius = 4
+        valueTag.alignment = .center
+        valueTag.alphaValue = 0
+        super.init(frame: NSRect(x: 0, y: 0, width: rowWidth, height: 30))
+
+        let icon = NSImageView(image: NSImage(systemSymbolName: symbol, accessibilityDescription: title)!)
+        icon.contentTintColor = .secondaryLabelColor
+        let label = NSTextField(labelWithString: title)
+        label.font = NSFont.systemFont(ofSize: 12)
+        label.textColor = .secondaryLabelColor
+        label.setContentHuggingPriority(.required, for: .horizontal)
+        slider.setContentHuggingPriority(.init(1), for: .horizontal)
+        slider.setContentCompressionResistancePriority(.init(1), for: .horizontal)
+
+        let stack = NSStackView(views: [icon, label, slider])
+        stack.orientation = .horizontal
+        stack.alignment = .centerY
+        stack.spacing = 8
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(stack)
+        addSubview(valueTag)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 6),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -6),
+            stack.centerYAnchor.constraint(equalTo: centerYAnchor),
+        ])
+    }
+
+    required init?(coder: NSCoder) { fatalError("unsupported") }
+
+    override func scrollWheel(with event: NSEvent) {
+        // 滚轮上(deltaY>0)=减(向左)，下=增(向右)
+        let delta: Double = event.deltaY > 0 ? -2 : 2
+        let clamped = max(slider.minValue, min(slider.maxValue, slider.doubleValue + delta))
+        slider.doubleValue = clamped
+        slider.target?.perform(slider.action, with: slider)
+        showValueTag()
+    }
+
+    /// 数值角标：旋钮上方浮现 0~100，0.7s 无操作即隐
+    private func showValueTag() {
+        let pct = CGFloat((slider.doubleValue - slider.minValue)
+            / max(slider.maxValue - slider.minValue, 0.001))
+        let trackStart: CGFloat = 6 + 15 + 8 + 40 + 8
+        let trackWidth = max(bounds.width - trackStart - 12, 10)
+        let x = trackStart + trackWidth * pct
+        valueTag.stringValue = String(Int(pct * 100))
+        valueTag.sizeToFit()
+        let tagWidth = max(valueTag.frame.width + 10, 30)
+        valueTag.frame = NSRect(x: min(max(x - tagWidth / 2, 8), bounds.width - tagWidth - 8),
+                                y: bounds.height - 2, width: tagWidth, height: 16)
+        valueTag.alphaValue = 1
+        hideTimer?.invalidate()
+        hideTimer = Timer.scheduledTimer(withTimeInterval: 0.7, repeats: false) { [weak self] _ in
+            self?.valueTag.alphaValue = 0
         }
     }
 }
@@ -145,8 +218,11 @@ func runDetached(_ path: String, _ args: [String]) {
 /// 单进程，总线住在 MenuBarShell 里，模块只广播/订阅、互相不 import；
 /// 唯一外派进程是 caffeinate（哑巴工人，只干防休眠，永不兼职调度）。
 enum ModuleEvent {
-    /// DisplayModule 滑杆变化，userInfo["value"] = 新亮度 0~1（自适应模块据此同步基线）
+    /// DisplayModule 滑杆变化，userInfo["value"] = 新亮度 0~1
     static let sliderDidChange = Notification.Name("minibar.sliderDidChange")
     /// 设置面板模块勾选变化（勾选即加载，取消即销毁）
     static let modulesChanged = Notification.Name("minibar.modulesChanged")
+    /// 模块 → 渲染器的行内提示（阻断警示等）
+    /// userInfo: "item" = NSMenuItem（定位行），"text" = String，"warn" = Bool
+    static let rowHint = Notification.Name("minibar.rowHint")
 }

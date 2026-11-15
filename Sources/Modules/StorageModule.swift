@@ -87,7 +87,7 @@ final class StorageModule: NSObject, MiniBarModule {
 
     func menuSection() -> [NSMenuItem]? {
         guard isEnabled(self) else { return nil }
-        var items = [sectionHeader("存储")]
+        var items = [sectionHeader(L("menu.section.storage"))]
         let formatter = ByteCountFormatter()
 
         for disk in mountedDisks() {
@@ -113,10 +113,12 @@ final class StorageModule: NSObject, MiniBarModule {
         }
 
         if items.count > 1 {
-            items.append(menuItem("安全弹出全部", symbol: "eject",
-                                  action: #selector(ejectAllDisks), target: self))
+            let ejectAll = menuItem(L("menu.storage.ejectAll"), symbol: "eject",
+                                    action: #selector(ejectAllDisks), target: self)
+            ejectAll.identifier = NSUserInterfaceItemIdentifier("minibar.confirmEjectAll")
+            items.append(ejectAll)
         } else {
-            let empty = NSMenuItem(title: "没有外接硬盘", action: nil, keyEquivalent: "")
+            let empty = NSMenuItem(title: L("menu.storage.empty"), action: nil, keyEquivalent: "")
             empty.image = NSImage(systemSymbolName: "externaldrive.badge.minus", accessibilityDescription: nil)
             items.append(empty)
         }

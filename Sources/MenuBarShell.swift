@@ -62,12 +62,12 @@ final class MenuBarShell: NSObject {
         }
         // PRD §11 锚点：分隔线后永远是设置与退出
         menu.addItem(.separator())
-        let settings = NSMenuItem(title: "MiniBar 设置…",
+        let settings = NSMenuItem(title: L("menu.settings"),
                                   action: #selector(AppDelegate.showSettings), keyEquivalent: ",")
         settings.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
         settings.target = NSApp.delegate as? AppDelegate
         menu.addItem(settings)
-        let quit = NSMenuItem(title: "退出 MiniBar",
+        let quit = NSMenuItem(title: L("menu.quit"),
                               action: #selector(AppDelegate.quit), keyEquivalent: "q")
         quit.image = NSImage(systemSymbolName: "power", accessibilityDescription: nil)
         quit.target = NSApp.delegate as? AppDelegate
