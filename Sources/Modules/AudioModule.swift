@@ -100,6 +100,9 @@ final class AudioModule: NSObject, MiniBarModule {
         let size = UInt32(MemoryLayout<UInt32>.stride)
         AudioObjectSetPropertyData(device, &address, 0, nil, size, &value)
         sender.state = value == 1 ? .on : .off
+        // 图标双态：静音喇叭 ↔ 有声喇叭（PRD §3.4）
+        sender.image = NSImage(systemSymbolName: value == 1 ? "speaker.slash" : "speaker.wave.2",
+                               accessibilityDescription: nil)
     }
 
     // MARK: - 设备切换
@@ -163,7 +166,8 @@ final class AudioModule: NSObject, MiniBarModule {
         let inputDefault = defaultDeviceID(kAudioHardwarePropertyDefaultInputDevice)
 
         var items = [sectionHeader(L("menu.section.audio"))]
-        let mute = menuItem(L("menu.audio.mute"), symbol: "speaker.slash",
+        let mute = menuItem(L("menu.audio.mute"),
+                            symbol: isMuted ? "speaker.slash" : "speaker.wave.2",
                             action: #selector(toggleMute(_:)), target: self,
                             state: isMuted ? .on : .off)
         mute.identifier = NSUserInterfaceItemIdentifier("minibar.switch")

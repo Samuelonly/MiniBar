@@ -11,6 +11,7 @@ final class HUDMenuPanel: NSPanel {
 
     private var monitors: [Any] = []
     private var hintObserver: NSObjectProtocol?
+    private var statusBarBottom: CGFloat?
     weak var shell: MenuBarShell?
 
     init(shell: MenuBarShell) {
@@ -57,10 +58,18 @@ final class HUDMenuPanel: NSPanel {
         content.onHeightChange = { [weak self] h in self?.syncHeight(h) }
 
         let host = NSHostingView(rootView: content)
-        host.frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: height)
+        if scrollable {
+            host.frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: height)
+            host.sizingOptions = []
+        } else {
+            // 常规：窗口高度由 SwiftUI 内容实际尺寸驱动，Block 展开时窗口自动长高
+            host.frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: height)
+            host.sizingOptions = [.minSize, .maxSize, .intrinsicContentSize]
+        }
         contentView = host
 
         // 贴住状态栏：面板顶边 = 状态栏底边，无装饰缝
+        statusBarBottom = buttonFrame?.minY
         var frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: height)
         if let buttonFrame {
             frame.origin.x = buttonFrame.midX - frame.width / 2
@@ -72,14 +81,15 @@ final class HUDMenuPanel: NSPanel {
         installMonitors()
     }
 
-    /// 内容高度变化（Block 展开等）→ 窗口跟随，保持顶边贴住状态栏
+    /// 内容高度变化（Block 展开等）→ 窗口跟随，顶边钉住状态栏底边
     func syncHeight(_ contentHeight: CGFloat) {
         let available = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let newHeight = min(contentHeight + 14, available.height - 40)
         guard abs(newHeight - frame.height) > 2 else { return }
         var frame = self.frame
-        frame.origin.y = frame.maxY - newHeight
         frame.size.height = newHeight
+        frame.origin.y = (statusBarBottom ?? frame.maxY) - newHeight
+        if frame.origin.y < available.minY + 8 { frame.origin.y = available.minY + 8 }
         setFrame(frame, display: true)
     }
 
@@ -348,6 +358,8 @@ private struct MenuSwitchRow: View {
     var onFlip: (Bool) -> Void
 
     @State private var isOn: Bool
+    // 图标双态：翻转后从模块回读 item.image（如静音喇叭 ↔ 斜线喇叭）
+    @State private var iconImage: NSImage?
 
     init(item: NSMenuItem, hint: String?, hintWarn: Bool, onFlip: @escaping (Bool) -> Void) {
         self.item = item
@@ -355,13 +367,14 @@ private struct MenuSwitchRow: View {
         self.hintWarn = hintWarn
         self.onFlip = onFlip
         _isOn = State(initialValue: item.state == .on)
+        _iconImage = State(initialValue: item.image)
     }
 
     var body: some View {
         Hoverable(content:
             HStack(spacing: 8) {
-                if let image = item.image {
-                    Image(nsImage: image).resizable().frame(width: 15, height: 15)
+                if let iconImage {
+                    Image(nsImage: iconImage).resizable().frame(width: 15, height: 15)
                         .foregroundStyle(.secondary)
                 }
                 Text(item.title).font(.system(size: 13)).lineLimit(1)
@@ -380,7 +393,11 @@ private struct MenuSwitchRow: View {
                     .labelsHidden()
                     .toggleStyle(.switch)
                     .controlSize(.small)
-                    .onChange(of: isOn) { _, newValue in onFlip(newValue) }
+                    .onChange(of: isOn) { _, newValue in
+                        onFlip(newValue)
+                        // 模块可能在响应里换图标（静音双态），回读同步
+                        iconImage = item.image
+                    }
             }
         )
         .animation(.easeOut(duration: 0.2), value: hint != nil)
