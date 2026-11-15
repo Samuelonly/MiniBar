@@ -174,9 +174,9 @@ final class DisplayModule: NSObject, MiniBarModule {
         }
 
         let brightnessRow = SliderRowView(title: L("menu.display.brightness"), symbol: "sun.max",
-                                          slider: brightness, rowWidth: HUDMenuPanel.rowWidth)
+                                          slider: brightness, rowWidth: 308)
         let contrastRow = SliderRowView(title: L("menu.display.contrast"), symbol: "circle.lefthalf.filled",
-                                        slider: contrast, rowWidth: HUDMenuPanel.rowWidth)
+                                        slider: contrast, rowWidth: 308)
         let brightnessItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         brightnessItem.view = brightnessRow
         let contrastItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")

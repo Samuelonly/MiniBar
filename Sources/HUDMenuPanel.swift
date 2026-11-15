@@ -1,26 +1,16 @@
 import AppKit
+import SwiftUI
 
-/// 自绘 HUD 菜单（1.0.2 渲染器定稿）：
-/// 模块仍以 NSMenu 树申报（menuSection() 零改动），本渲染器把树转成 HUD 面板。
-/// 堆栈 = z 轴浮层：子卡片浮在下方行之上，父行与面板高度纹丝不动（PRD §11 二次定稿）。
-/// 行布局采用手动排布（行高全部固定值，确定性最高）——不与 NSStackView 混用。
+/// 自绘 HUD 菜单（1.0.2 渲染器 v2：SwiftUI 渲染）：
+/// 模块仍以 NSMenu 树申报（menuSection() 零改动），NSHostingView 把树转成声明式布局——
+/// 浮层堆栈 / 开关行 / 阻尼 hover / 数值角标全部确定性，不再手排坐标。
 /// NSMenu 仅作为数据模型存在，不再显示。
 final class HUDMenuPanel: NSPanel {
     static let width: CGFloat = 320
-    /// 行/hover/点击热区宽 = 面板宽 − 两侧安全区各 10pt（PRD §11 行内缩）
-    static let rowWidth: CGFloat = width - 20
 
-    private var expanded: ObjectIdentifier?
     private var monitors: [Any] = []
-    weak var shell: MenuBarShell?
-
-    private var contentRows: [NSView] = []
-    private var rowsById: [ObjectIdentifier: NSView] = [:]
-    private var expanderArrows: [ObjectIdentifier: NSImageView] = [:]
-    private var switchMap: [ObjectIdentifier: (sw: NSSwitch, item: NSMenuItem)] = [:]
-    private var overlayCard: NSView?
-    private var overlayMonitor: Any?
     private var hintObserver: NSObjectProtocol?
+    weak var shell: MenuBarShell?
 
     init(shell: MenuBarShell) {
         self.shell = shell
@@ -35,52 +25,39 @@ final class HUDMenuPanel: NSPanel {
         title = "MiniBar"
         level = .floating
         isMovableByWindowBackground = false
+    }
 
+    /// 面板内容：毛玻璃层（AppKit）+ SwiftUI 内容层
+    private func installContent(menu: NSMenu) {
         let blur = NSVisualEffectView()
         blur.material = .hudWindow
         blur.blendingMode = .behindWindow
         blur.state = .active
-
-        let scroll = NSScrollView()
-        scroll.hasVerticalScroller = true
-        scroll.autohidesScrollers = true
-        scroll.drawsBackground = false
-        scroll.translatesAutoresizingMaskIntoConstraints = false
-
-        let container = FlippedView()
-        scroll.documentView = container
-
-        let content = NSView(frame: NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: 120))
-        blur.frame = content.bounds
+        blur.frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: 120)
         blur.autoresizingMask = [.width, .height]
-        content.addSubview(blur)
-        content.addSubview(scroll)
-        NSLayoutConstraint.activate([
-            scroll.topAnchor.constraint(equalTo: content.topAnchor),
-            scroll.bottomAnchor.constraint(equalTo: content.bottomAnchor),
-            scroll.leadingAnchor.constraint(equalTo: content.leadingAnchor),
-            scroll.trailingAnchor.constraint(equalTo: content.trailingAnchor),
-        ])
-        contentView = content
-    }
 
-    /// 翻转坐标：y 从顶部起算，行排布直觉化
-    private final class FlippedView: NSView {
-        override var isFlipped: Bool { true }
-    }
+        var content = HUDMenuContent(menu: menu)
+        content.onDismiss = { [weak self] in self?.dismiss() }
+        let host = NSHostingView(rootView: content)
+        host.frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: 120)
+        host.autoresizingMask = [.width, .height]
+        host.sizingOptions = [.minSize, .maxSize, .intrinsicContentSize]
 
-    private var rowContainer: FlippedView? {
-        (contentView as? NSView)?.subviews.compactMap { $0 as? NSScrollView }
-            .first?.documentView as? FlippedView
+        let container = NSView(frame: blur.frame)
+        container.addSubview(blur)
+        container.addSubview(host)
+        contentView = container
     }
 
     // MARK: - 显示 / 收起
 
     func showUnderButton(_ buttonFrame: NSRect?) {
-        expanded = nil
-        rebuildContent()
+        guard let menu = shell?.buildMenuModel() else { return }
+        installContent(menu: menu)
+
         let available = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        var height = min((rowContainer?.frame.height ?? 200) + 14, available.height - 40)
+        contentView?.layoutSubtreeIfNeeded()
+        var height = min((contentView?.fittingSize.height ?? 200) + 2, available.height - 40)
         height = max(height, 120)
 
         var frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: height)
@@ -99,358 +76,15 @@ final class HUDMenuPanel: NSPanel {
         orderOut(nil)
         for monitor in monitors { NSEvent.removeMonitor(monitor) }
         monitors.removeAll()
-        expanded = nil
-        hideOverlay()
-    }
-
-    // MARK: - 渲染：NSMenu 树 → 行（子树走浮层，不参与行排布）
-
-    private func rebuildContent() {
-        guard let container = rowContainer else { return }
-        container.subviews.forEach { $0.removeFromSuperview() }
-        rowsById.removeAll()
-        expanderArrows.removeAll()
-        switchMap.removeAll()
-        contentRows.removeAll()
-        hideOverlay()
-
-        guard let menu = shell?.buildMenuModel() else { return }
-        for item in menu.items {
-            render(item: item, into: container)
-        }
-        layoutRows(in: container)
-        installHintObserver()
-    }
-
-    /// 手动排布：行高全部固定值，从顶部逐行往下放
-    private func layoutRows(in container: NSView) {
-        var y: CGFloat = 6
-        for row in contentRows {
-            row.frame = NSRect(x: 10, y: y, width: HUDMenuPanel.rowWidth, height: row.frame.height)
-            y += row.frame.height + 1
-        }
-        container.frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: y + 8)
-    }
-
-    private func render(item: NSMenuItem, into container: NSView) {
-        if item.isSeparatorItem {
-            container.addSubview(divider())
-            return
-        }
-        if item.identifier?.rawValue == "minibar.sectionHeader" {
-            container.addSubview(headerRow(item.title))
-            return
-        }
-        if let view = item.view {
-            container.addSubview(view)
-            return
-        }
-        if item.submenu != nil {
-            let row = expanderRow(item)
-            rowsById[ObjectIdentifier(item)] = row
-            container.addSubview(row)
-            return
-        }
-        let row = actionRow(item)
-        rowsById[ObjectIdentifier(item)] = row
-        container.addSubview(row)
-    }
-
-    // MARK: - 浮层卡片（z 轴堆栈：不推挤面板，浮在后续行之上）
-
-    private func showOverlay(for item: NSMenuItem) {
-        guard let submenu = item.submenu, let container = rowContainer,
-              let anchorRow = rowsById[ObjectIdentifier(item)] else { return }
-        hideOverlay()
-
-        let card = FlippedView()
-        card.wantsLayer = true
-        // 比主面板深一档（不 100% 不透明），重叠处文字仍清晰
-        card.layer?.backgroundColor = NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 0.88).cgColor
-        card.layer?.cornerRadius = 8
-        card.layer?.borderColor = NSColor.white.withAlphaComponent(0.09).cgColor
-        card.layer?.borderWidth = 1
-        card.layer?.shadowColor = NSColor.black.cgColor
-        card.layer?.shadowOpacity = 0.5
-        card.layer?.shadowRadius = 12
-        card.layer?.masksToBounds = false
-
-        let cardWidth = HUDMenuPanel.rowWidth - 26
-        var y: CGFloat = 4
-        for child in submenu.items where !child.isSeparatorItem {
-            let row = overlayRow(child, rowWidth: cardWidth - 8)
-            row.frame = NSRect(x: 4, y: y, width: cardWidth - 8, height: row.frame.height)
-            y += row.frame.height + 1
-            card.addSubview(row)
-        }
-        card.frame = NSRect(x: 40, y: 0, width: cardWidth, height: y + 4)
-
-        container.addSubview(card, positioned: .above, relativeTo: nil)
-        // 定位：锚行正下方，浮在后续行之上（容器翻转坐标：origin.y 即视觉顶部）
-        let anchorFrame = anchorRow.frame
-        card.frame.origin.y = anchorFrame.maxY + 2
-        overlayCard = card
-
-        // 浮层锚行箭头翻转
-        if let arrow = expanderArrows[ObjectIdentifier(item)] {
-            arrow.layer?.transform = CATransform3DMakeRotation(.pi, 0, 0, 1)
-        }
-
-        // 点浮层外（面板内）自动收起
-        overlayMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
-            guard let self, self.overlayCard != nil else { return event }
-            let inWindow = event.window === self ? event.locationInWindow : NSEvent.mouseLocation
-            let inContainer = container.convert(inWindow, from: nil)
-            let inCard = card.frame.contains(inContainer)
-            let inAnchor = anchorRow.frame.contains(inContainer)
-            if !inCard && !inAnchor {
-                self.collapseOverlay()
-            }
-            return event
+        if let hintObserver {
+            NotificationCenter.default.removeObserver(hintObserver)
+            self.hintObserver = nil
         }
     }
 
-    private func collapseOverlay() {
-        if let item = rowsById.first(where: { $0.value === overlayCard }).map({ $0.key }) { _ = item }
-        if let arrow = expanderArrows.first(where: { ObjectIdentifier($1) == expanded }).map({ $1 }) {
-            arrow.layer?.transform = CATransform3DIdentity
-        }
-        expanded = nil
-        hideOverlay()
-    }
-
-    private func hideOverlay() {
-        overlayCard?.removeFromSuperview()
-        overlayCard = nil
-        if let overlayMonitor {
-            NSEvent.removeMonitor(overlayMonitor)
-            self.overlayMonitor = nil
-        }
-        expanderArrows.values.forEach { $0.layer?.transform = CATransform3DIdentity }
-    }
-
-    /// 浮层行：图标 + 名称 + 标签 + 右侧开关（单选互斥在点击后同步）
-    private func overlayRow(_ item: NSMenuItem, rowWidth: CGFloat) -> NSView {
-        let height: CGFloat = 24
-        let row = HoverCardView(frame: NSRect(x: 0, y: 0, width: rowWidth, height: height))
-
-        let icon = NSImageView(image: item.image ?? NSImage())
-        icon.contentTintColor = .secondaryLabelColor
-        icon.frame = NSRect(x: 8, y: (height - 13) / 2, width: 13, height: 13)
-
-        // 设备行标题格式 "名称 · 类型"：类型拆出来放右侧（开关左侧）
-        let parts = item.title.components(separatedBy: " · ")
-        let nameText = parts.first ?? item.title
-        let tagText: String? = parts.count > 1 ? parts.last : nil
-
-        let title = NSTextField(labelWithString: nameText)
-        title.font = NSFont.systemFont(ofSize: 12)
-        title.lineBreakMode = .byTruncatingMiddle
-
-        let sw = NSSwitch()
-        sw.controlSize = .mini
-        sw.state = item.state == .on ? .on : .off
-        let swSize = sw.intrinsicContentSize
-        sw.frame = NSRect(x: rowWidth - swSize.width - 6, y: (height - swSize.height) / 2,
-                          width: swSize.width, height: swSize.height)
-        switchMap[ObjectIdentifier(sw)] = (sw, item)
-        sw.target = self
-        sw.action = #selector(switchFlipped(_:))
-
-        row.addSubview(icon)
-        row.addSubview(title)
-        row.addSubview(sw)
-
-        if let tagText {
-            let tag = NSTextField(labelWithString: tagText)
-            tag.font = NSFont.monospacedSystemFont(ofSize: 9, weight: .regular)
-            tag.textColor = .tertiaryLabelColor
-            tag.frame = NSRect(x: sw.frame.minX - 64, y: (height - 13) / 2, width: 58, height: 13)
-            tag.alignment = .right
-            row.addSubview(tag)
-            title.frame.size.width = sw.frame.minX - 64 - 26 - 8
-        } else {
-            title.frame.size.width = sw.frame.minX - 26 - 8
-        }
-        return row
-    }
-
-    /// 浮层内开关：派发回模块（from: 菜单项），随后组内单选互斥 + 以模块回写状态为准
-    @objc private func switchFlipped(_ sender: NSSwitch) {
-        guard let entry = switchMap.first(where: { $0.value.sw === sender })?.value else { return }
-        let item = entry.item
-        if let target = item.target, let action = item.action {
-            NSApp.sendAction(action, to: target, from: item)
-        }
-        // 单选互斥：同卡片内点亮的保持，其余熄灭
-        for (_, other) in switchMap where other.sw !== sender && other.sw.superview === entry.sw.superview {
-            if other.sw.state == .on { other.sw.state = .off }
-        }
-        // 旋转方向等模块会回写 item.state——以模块为准
-        sender.state = item.state == .on ? .on : .off
-    }
-
-    // MARK: - 常规行
-
-    private func expanderRow(_ item: NSMenuItem) -> NSView {
-        let row = rowBase(item: item, chevron: "chevron.down")
-        let arrow = row.subviews.compactMap { $0 as? NSImageView }.last
-        if let arrow { expanderArrows[ObjectIdentifier(item)] = arrow }
-        row.onClick = { [weak self] in
-            guard let self else { return }
-            let id = ObjectIdentifier(item)
-            if expanded == id {
-                collapseOverlay()
-            } else {
-                expanded = id
-                showOverlay(for: item)
-            }
-        }
-        return row
-    }
-
-    private func actionRow(_ item: NSMenuItem) -> NSView {
-        if item.identifier?.rawValue == "minibar.confirmEjectAll" {
-            return confirmRow(item)
-        }
-        let row = rowBase(item: item, chevron: nil)
-        if item.action != nil {
-            row.onClick = { [weak self] in
-                if let target = item.target, let action = item.action {
-                    NSApp.sendAction(action, to: target, from: item)
-                }
-                self?.dismiss()
-            }
-        }
-        return row
-    }
-
-    /// 破坏性动作二段行内确认（PRD §3.6）：点击 → "确认弹出全部？" → 再点执行；2 秒未点自动还原
-    private func confirmRow(_ item: NSMenuItem) -> NSView {
-        let row = rowBase(item: item, chevron: nil)
-        let label = row.subviews.compactMap { $0 as? NSTextField }.first
-        var confirmTimer: Timer?
-        row.onClick = { [weak row, weak self] in
-            guard let row, let self else { return }
-            if row.layer?.backgroundColor == NSColor(red: 1, green: 0.55, blue: 0.2, alpha: 0.15).cgColor {
-                confirmTimer?.invalidate()
-                row.layer?.backgroundColor = NSColor.clear.cgColor
-                if let target = item.target, let action = item.action {
-                    NSApp.sendAction(action, to: target, from: item)
-                }
-                self.dismiss()
-            } else {
-                confirmTimer?.invalidate()
-                row.layer?.backgroundColor = NSColor(red: 1, green: 0.55, blue: 0.2, alpha: 0.15).cgColor
-                label?.stringValue = L("menu.storage.ejectAllConfirm")
-                label?.textColor = NSColor(red: 1, green: 0.71, blue: 0.33, alpha: 1)
-                confirmTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: false) { _ in
-                    row.layer?.backgroundColor = NSColor.clear.cgColor
-                    label?.stringValue = L("menu.storage.ejectAll")
-                    label?.textColor = .labelColor
-                }
-            }
-        }
-        return row
-    }
-
-    // MARK: - 行构造
-
-    private func rowBase(item: NSMenuItem, chevron: String?) -> HoverCardView {
-        let height: CGFloat = 26
-        let row = HoverCardView(frame: NSRect(x: 0, y: 0, width: HUDMenuPanel.rowWidth, height: height))
-        row.wantsLayer = true
-
-        let icon = NSImageView(image: item.image ?? NSImage())
-        icon.contentTintColor = .secondaryLabelColor
-        let iconWidth: CGFloat = item.image == nil ? 0 : 16
-        icon.frame = NSRect(x: 10, y: (height - 15) / 2, width: iconWidth, height: 15)
-
-        var textX = 10 + iconWidth + (iconWidth > 0 ? 8 : 0)
-        let title = NSTextField(labelWithString: item.title)
-        title.font = NSFont.systemFont(ofSize: 13)
-        title.textColor = item.isEnabled ? .labelColor : .tertiaryLabelColor
-        title.lineBreakMode = .byTruncatingMiddle
-
-        var trailingReservation: CGFloat = 10
-        if !item.keyEquivalent.isEmpty {
-            let key = NSTextField(labelWithString: "⌘\(item.keyEquivalent.uppercased())")
-            key.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
-            key.textColor = .tertiaryLabelColor
-            key.frame = NSRect(x: HUDMenuPanel.rowWidth - 40, y: (height - 13) / 2, width: 34, height: 13)
-            key.alignment = .right
-            row.addSubview(key)
-            trailingReservation = 48
-        }
-        if let chevron {
-            let arrow = NSImageView(image: NSImage(systemSymbolName: chevron,
-                                                   accessibilityDescription: nil)!)
-            arrow.contentTintColor = .tertiaryLabelColor
-            arrow.frame = NSRect(x: HUDMenuPanel.rowWidth - 24, y: (height - 11) / 2, width: 12, height: 11)
-            row.addSubview(arrow)
-            trailingReservation = max(trailingReservation, 28)
-        }
-
-        let textWidth = HUDMenuPanel.rowWidth - textX - trailingReservation
-        title.frame = NSRect(x: textX, y: (height - 16) / 2, width: max(textWidth, 40), height: 16)
-        row.addSubview(icon)
-        row.addSubview(title)
-        return row
-    }
-
-    private func headerRow(_ title: String) -> NSView {
-        let height: CGFloat = 22
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: HUDMenuPanel.rowWidth, height: height))
-        let label = NSTextField(labelWithString: title)
-        label.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .semibold)
-        label.textColor = .tertiaryLabelColor
-        label.frame = NSRect(x: 10, y: (height - 13) / 2, width: HUDMenuPanel.rowWidth - 20, height: 13)
-        container.addSubview(label)
-        return container
-    }
-
-    private func divider() -> NSView {
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: HUDMenuPanel.rowWidth, height: 1))
-        view.wantsLayer = true
-        view.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.08).cgColor
-        return view
-    }
-
-    // MARK: - 行内提示（阻断警示等，模块经 ModuleEvent.rowHint 发来）
-
-    private func installHintObserver() {
-        guard hintObserver == nil else { return }
-        hintObserver = NotificationCenter.default.addObserver(
-            forName: ModuleEvent.rowHint, object: nil, queue: .main
-        ) { [weak self] note in
-            guard let self, self.isVisible,
-                  let item = note.userInfo?["item"] as? NSMenuItem,
-                  let text = note.userInfo?["text"] as? String else { return }
-            let warn = (note.userInfo?["warn"] as? Bool) ?? false
-            guard let row = self.rowsById[ObjectIdentifier(item)] else { return }
-            row.subviews.filter { $0.identifier?.rawValue == "minibar.flash" }
-                .forEach { $0.removeFromSuperview() }
-            let flash = NSTextField(labelWithString: text)
-            flash.identifier = NSUserInterfaceItemIdentifier("minibar.flash")
-            flash.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .medium)
-            flash.textColor = warn ? NSColor(red: 1, green: 0.71, blue: 0.33, alpha: 1)
-                                   : NSColor(red: 0.49, green: 0.89, blue: 0.66, alpha: 1)
-            flash.wantsLayer = true
-            flash.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.4).cgColor
-            flash.layer?.cornerRadius = 4
-            flash.frame = NSRect(x: row.frame.width - 150, y: 4, width: 140, height: 18)
-            flash.alignment = .center
-            row.addSubview(flash)
-            Timer.scheduledTimer(withTimeInterval: 1.4, repeats: false) { _ in
-                flash.removeFromSuperview()
-            }
-        }
-    }
-
-    // MARK: - 关闭监听
+    // MARK: - 关闭监听（面板外点击 / Esc）
 
     private func installMonitors() {
-        installHintObserver()
         let clickMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
         ) { [weak self] _ in
@@ -465,5 +99,331 @@ final class HUDMenuPanel: NSPanel {
             return nil
         }
         monitors = [clickMonitor, keyMonitor as Any]
+
+        // 模块行内提示（阻断警示等）：桥接进 SwiftUI 状态
+        hintObserver = NotificationCenter.default.addObserver(
+            forName: ModuleEvent.rowHint, object: nil, queue: .main
+        ) { [weak self] note in
+            guard let self, self.isVisible,
+                  let item = note.userInfo?["item"] as? NSMenuItem,
+                  let text = note.userInfo?["text"] as? String else { return }
+            let warn = (note.userInfo?["warn"] as? Bool) ?? false
+            guard let host = (contentView as? NSView)?.subviews.compactMap({ $0 as? NSHostingView<HUDMenuContent> }).first else { return }
+            var root = host.rootView
+            root.hintItem = ObjectIdentifier(item)
+            root.hintText = text
+            root.hintWarn = warn
+            host.rootView = root
+        }
     }
+}
+
+// MARK: - SwiftUI 内容
+
+private struct HUDMenuContent: View {
+    let menu: NSMenu
+    var onDismiss: (() -> Void)?
+
+    @State private var expandedID: ObjectIdentifier?
+    @State private var appeared = false
+    // 行内提示（阻断警示），按 item 定位
+    var hintItem: ObjectIdentifier?
+    var hintText: String = ""
+    var hintWarn = false
+
+    private let itemSpacing: CGFloat = 1
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            VStack(alignment: .leading, spacing: itemSpacing) {
+                ForEach(Array(menu.items.enumerated()), id: \.offset) { _, item in
+                    row(item)
+                }
+            }
+            // 浮层卡片：z 轴堆栈，锚在展开行下方，不推挤面板
+            if let expander = expandedItem {
+                overlayCard(expander)
+                    .offset(y: offsetForOverlay(expander))
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .frame(width: HUDMenuPanel.width, alignment: .topLeading)
+        .opacity(appeared ? 1 : 0)
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.15)) { appeared = true }
+        }
+        .background(Color.clear.onTapGesture {
+            expandedID = nil   // 点面板内其他区域：浮层收起
+        })
+    }
+
+    private var expandedItem: NSMenuItem? {
+        menu.items.first { ObjectIdentifier($0) == expandedID }
+    }
+
+    /// 浮层 y 偏移 = 展开行上方所有行的累计高度（行高全部固定，可精确计算）
+    private func offsetForOverlay(_ expander: NSMenuItem) -> CGFloat {
+        var offset: CGFloat = 6
+        for item in menu.items {
+            if ObjectIdentifier(item) == expandedID { break }
+            offset += rowHeight(item) + itemSpacing
+        }
+        return offset + rowHeight(expander) + 2
+    }
+
+    private func rowHeight(_ item: NSMenuItem) -> CGFloat {
+        if item.isSeparatorItem { return 1 }
+        if item.identifier?.rawValue == "minibar.sectionHeader" { return 22 }
+        if item.view != nil { return 30 }
+        return 26
+    }
+
+    // MARK: - 行分发
+
+    @ViewBuilder private func row(_ item: NSMenuItem) -> some View {
+        if item.isSeparatorItem {
+            Rectangle().fill(Color.white.opacity(0.08)).frame(height: 1)
+        } else if item.identifier?.rawValue == "minibar.sectionHeader" {
+            Text(item.title)
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .tracking(1.6)
+                .foregroundStyle(.tertiary)
+                .padding(.vertical, 4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else if let view = item.view {
+            AppKitRow(view: view)
+        } else if item.submenu != nil {
+            ExpanderRow(item: item,
+                        isExpanded: ObjectIdentifier(item) == expandedID,
+                        hasHint: hintItem == ObjectIdentifier(item),
+                        onToggle: {
+                            expandedID = (expandedID == ObjectIdentifier(item)) ? nil : ObjectIdentifier(item)
+                        })
+        } else if item.identifier?.rawValue == "minibar.confirmEjectAll" {
+            ConfirmEjectAllRow(item: item) { dismissPanel() }
+        } else if item.identifier?.rawValue == "minibar.switch" {
+            MenuSwitchRow(item: item, showsCheck: false,
+                          onFlip: { flipped in send(item, flipped) })
+        } else {
+            ActionRow(item: item,
+                      hasHint: hintItem == ObjectIdentifier(item),
+                      hintText: hintItem == ObjectIdentifier(item) ? hintText : "",
+                      hintWarn: hintWarn,
+                      onAction: {
+                          send(item, true)
+                          dismissPanel()
+                      })
+        }
+    }
+
+    private func send(_ item: NSMenuItem, _ flipped: Bool) {
+        if let target = item.target, let action = item.action {
+            NSApp.sendAction(action, to: target, from: item)
+        }
+    }
+
+    private func dismissPanel() {
+        onDismiss?()
+    }
+
+    // MARK: - 浮层卡片
+
+    @ViewBuilder private func overlayCard(_ expander: NSMenuItem) -> some View {
+        if let submenu = expander.submenu {
+            VStack(alignment: .leading, spacing: itemSpacing) {
+                ForEach(Array(submenu.items.enumerated()), id: \.offset) { _, child in
+                    if !child.isSeparatorItem {
+                        MenuSwitchRow(item: child, showsCheck: false,
+                                      onFlip: { flipped in send(child, flipped) })
+                    }
+                }
+            }
+            .padding(4)
+            .frame(width: HUDMenuPanel.width - 56, alignment: .leading)
+            .background(Color(red: 0.12, green: 0.12, blue: 0.14).opacity(0.88))
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.white.opacity(0.09)))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .shadow(color: .black.opacity(0.5), radius: 12)
+            .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+        }
+    }
+}
+
+// MARK: - 行组件
+
+/// 悬停阻尼 + 点击行
+private struct Hoverable<Content: View>: View {
+    let content: Content
+    var onClick: (() -> Void)?
+
+    @State private var hovering = false
+
+    var body: some View {
+        content
+            .padding(.horizontal, 6)
+            .frame(maxWidth: .infinity, minHeight: 26, alignment: .leading)
+            .background(hovering ? Color.white.opacity(0.08) : Color.clear)
+            .shadow(color: .black.opacity(hovering ? 0.3 : 0), radius: hovering ? 5 : 0)
+            .animation(.easeOut(duration: 0.22), value: hovering)
+            .contentShape(Rectangle())
+            .onHover { hovering = $0 }
+            .onTapGesture { onClick?() }
+    }
+}
+
+/// 开关行（菜单行真开关，PRD §3.6）
+private struct MenuSwitchRow: View {
+    let item: NSMenuItem
+    var showsCheck = true
+    var onFlip: (Bool) -> Void
+
+    @State private var isOn: Bool
+
+    init(item: NSMenuItem, showsCheck: Bool, onFlip: @escaping (Bool) -> Void) {
+        self.item = item
+        self.showsCheck = showsCheck
+        self.onFlip = onFlip
+        _isOn = State(initialValue: item.state == .on)
+    }
+
+    var body: some View {
+        Hoverable(content:
+            HStack(spacing: 8) {
+                if let image = item.image {
+                    Image(nsImage: image).resizable().frame(width: 15, height: 15)
+                        .foregroundStyle(.secondary)
+                }
+                Text(item.title).font(.system(size: 13)).lineLimit(1)
+                Spacer(minLength: 8)
+                Toggle("", isOn: $isOn)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .onChange(of: isOn) { _, newValue in onFlip(newValue) }
+            }
+        )
+    }
+}
+
+/// 普通动作行
+private struct ActionRow: View {
+    let item: NSMenuItem
+    var hasHint: Bool
+    var hintText: String
+    var hintWarn: Bool
+    var onAction: () -> Void
+
+    @State private var hovering = false
+
+    var body: some View {
+        Hoverable(content:
+            HStack(spacing: 8) {
+                if let image = item.image {
+                    Image(nsImage: image).resizable().frame(width: 15, height: 15)
+                        .foregroundStyle(.secondary)
+                }
+                Text(item.title).font(.system(size: 13)).lineLimit(1)
+                Spacer(minLength: 8)
+                if hasHint {
+                    Text(hintText)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(hintWarn ? Color(red: 1, green: 0.71, blue: 0.33)
+                                                  : Color(red: 0.49, green: 0.89, blue: 0.66))
+                        .padding(.horizontal, 5).padding(.vertical, 2)
+                        .background(Color.black.opacity(0.4))
+                        .cornerRadius(4)
+                        .transition(.opacity)
+                } else if !item.keyEquivalent.isEmpty {
+                    Text("⌘\(item.keyEquivalent.uppercased())")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        ) { onAction() }
+        .animation(.easeOut(duration: 0.2), value: hasHint)
+    }
+
+    init(item: NSMenuItem, hasHint: Bool, hintText: String, hintWarn: Bool,
+         onAction: @escaping () -> Void) {
+        self.item = item
+        self.hasHint = hasHint
+        self.hintText = hintText
+        self.hintWarn = hintWarn
+        self.onAction = onAction
+    }
+}
+
+/// 展开行（向下箭头）
+private struct ExpanderRow: View {
+    let item: NSMenuItem
+    let isExpanded: Bool
+    var hasHint = false
+    var onToggle: () -> Void
+
+    @State private var hovering = false
+
+    var body: some View {
+        Hoverable(content:
+            HStack(spacing: 8) {
+                if let image = item.image {
+                    Image(nsImage: image).resizable().frame(width: 15, height: 15)
+                        .foregroundStyle(.secondary)
+                }
+                Text(item.title).font(.system(size: 13)).lineLimit(1)
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.tertiary)
+                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                    .animation(.easeOut(duration: 0.22), value: isExpanded)
+            }
+        ) { onToggle() }
+    }
+}
+
+/// 破坏性动作二段确认行（PRD §3.6）
+private struct ConfirmEjectAllRow: View {
+    let item: NSMenuItem
+    var onConfirmed: () -> Void
+
+    @State private var confirming = false
+    @State private var timer: Timer?
+
+    var body: some View {
+        Hoverable(content:
+            HStack(spacing: 8) {
+                if let image = item.image {
+                    Image(nsImage: image).resizable().frame(width: 15, height: 15)
+                        .foregroundStyle(.secondary)
+                }
+                Text(confirming ? NSLocalizedString("menu.storage.ejectAllConfirm", comment: "")
+                                : item.title)
+                    .font(.system(size: 13))
+                    .foregroundStyle(confirming ? Color(red: 1, green: 0.71, blue: 0.33) : .primary)
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+            }
+            .background(confirming ? Color(red: 1, green: 0.55, blue: 0.2).opacity(0.15) : Color.clear)
+        ) {
+            if confirming {
+                timer?.invalidate()
+                confirming = false
+                onConfirmed()
+            } else {
+                confirming = true
+                timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: false) { _ in
+                    confirming = false
+                }
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: confirming)
+    }
+}
+
+/// 嵌入模块申报的 AppKit 视图（滑杆行：滚轮+角标）
+private struct AppKitRow: NSViewRepresentable {
+    let view: NSView
+    func makeNSView(context: Context) -> NSView { view }
+    func updateNSView(_ nsView: NSView, context: Context) {}
 }
