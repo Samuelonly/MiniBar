@@ -159,7 +159,7 @@ while case let proxy = IOIteratorNext(iterator), proxy != 0 {
                         let sent = zero.withUnsafeMutableBytes { raw in
                             write(service, chip, 0x51, raw.baseAddress!, UInt32(raw.count)) == kIOReturnSuccess
                         }
-                        usleep(300_000)
+                        usleep(2_000_000)
                         print("    [实验] 已向 0x14 写入 0（\(sent ? "发送成功" : "发送失败")）——请观察屏幕画面模式是否变化")
                         // 立刻恢复原值
                         var back: [UInt8] = [0x84, 0x03, 0x14, UInt8(current >> 8), UInt8(current & 0xFF)]
