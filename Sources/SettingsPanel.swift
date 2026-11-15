@@ -18,6 +18,7 @@ final class SettingsPanel: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         titlebarAppearsTransparent = true
+        titleVisibility = .hidden
         title = "MiniBar 设置"
         level = .floating
         isMovableByWindowBackground = true

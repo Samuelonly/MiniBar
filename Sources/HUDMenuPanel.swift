@@ -3,7 +3,7 @@ import AppKit
 /// 自绘 HUD 菜单（1.0.2 渲染器定稿）：
 /// 模块仍以 NSMenu 树申报（menuSection() 零改动），本渲染器把树转成 HUD 面板。
 /// 堆栈 = z 轴浮层：子卡片浮在下方行之上，父行与面板高度纹丝不动（PRD §11 二次定稿）。
-/// 开关行（identifier "minibar.switch"）右侧真开关；"minibar.confirmEjectAll" 走二段行内确认。
+/// 行布局采用手动排布（行高全部固定值，确定性最高）——不与 NSStackView 混用。
 /// NSMenu 仅作为数据模型存在，不再显示。
 final class HUDMenuPanel: NSPanel {
     static let width: CGFloat = 320
@@ -14,10 +14,11 @@ final class HUDMenuPanel: NSPanel {
     private var monitors: [Any] = []
     weak var shell: MenuBarShell?
 
+    private var contentRows: [NSView] = []
     private var rowsById: [ObjectIdentifier: NSView] = [:]
+    private var expanderArrows: [ObjectIdentifier: NSImageView] = [:]
     private var switchMap: [ObjectIdentifier: (sw: NSSwitch, item: NSMenuItem)] = [:]
     private var overlayCard: NSView?
-    private var overlayItem: NSMenuItem?
     private var overlayMonitor: Any?
     private var hintObserver: NSObjectProtocol?
 
@@ -30,6 +31,7 @@ final class HUDMenuPanel: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         titlebarAppearsTransparent = true
+        titleVisibility = .hidden
         title = "MiniBar"
         level = .floating
         isMovableByWindowBackground = false
@@ -43,29 +45,14 @@ final class HUDMenuPanel: NSPanel {
         scroll.hasVerticalScroller = true
         scroll.autohidesScrollers = true
         scroll.drawsBackground = false
+        scroll.translatesAutoresizingMaskIntoConstraints = false
 
-        // 行容器：stack 负责常规行；浮层卡片加在 container 上（z 轴，不参与布局）
-        let container = NSView()
-        container.translatesAutoresizingMaskIntoConstraints = false
-        let stack = NSStackView()
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 1
-        stack.edgeInsets = NSEdgeInsets(top: 6, left: 10, bottom: 8, right: 10)
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: container.topAnchor),
-            stack.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-        ])
+        let container = FlippedView()
         scroll.documentView = container
 
         let content = NSView(frame: NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: 120))
         blur.frame = content.bounds
         blur.autoresizingMask = [.width, .height]
-        scroll.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(blur)
         content.addSubview(scroll)
         NSLayoutConstraint.activate([
@@ -77,12 +64,14 @@ final class HUDMenuPanel: NSPanel {
         contentView = content
     }
 
-    private var rowContainer: NSView? { documentStack()?.superview }
-    private func documentStack() -> NSStackView? {
-        guard let content = contentView as? NSView,
-              let scroll = content.subviews.compactMap({ $0 as? NSScrollView }).first,
-              let container = scroll.documentView as? NSView else { return nil }
-        return container.subviews.compactMap { $0 as? NSStackView }.first
+    /// 翻转坐标：y 从顶部起算，行排布直觉化
+    private final class FlippedView: NSView {
+        override var isFlipped: Bool { true }
+    }
+
+    private var rowContainer: FlippedView? {
+        (contentView as? NSView)?.subviews.compactMap { $0 as? NSScrollView }
+            .first?.documentView as? FlippedView
     }
 
     // MARK: - 显示 / 收起
@@ -91,8 +80,7 @@ final class HUDMenuPanel: NSPanel {
         expanded = nil
         rebuildContent()
         let available = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        contentView?.layoutSubtreeIfNeeded()
-        var height = min((rowContainer?.fittingSize.height ?? 200) + 14, available.height - 40)
+        var height = min((rowContainer?.frame.height ?? 200) + 14, available.height - 40)
         height = max(height, 120)
 
         var frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: height)
@@ -115,44 +103,57 @@ final class HUDMenuPanel: NSPanel {
         hideOverlay()
     }
 
-    // MARK: - 渲染：NSMenu 树 → 行（子树走浮层）
+    // MARK: - 渲染：NSMenu 树 → 行（子树走浮层，不参与行排布）
 
     private func rebuildContent() {
-        guard let stack = documentStack(), let container = rowContainer else { return }
-        stack.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        hideOverlay()
+        guard let container = rowContainer else { return }
+        container.subviews.forEach { $0.removeFromSuperview() }
         rowsById.removeAll()
+        expanderArrows.removeAll()
         switchMap.removeAll()
+        contentRows.removeAll()
+        hideOverlay()
 
         guard let menu = shell?.buildMenuModel() else { return }
         for item in menu.items {
-            render(item: item, into: stack)
+            render(item: item, into: container)
         }
+        layoutRows(in: container)
         installHintObserver()
     }
 
-    private func render(item: NSMenuItem, into stack: NSStackView) {
+    /// 手动排布：行高全部固定值，从顶部逐行往下放
+    private func layoutRows(in container: NSView) {
+        var y: CGFloat = 6
+        for row in contentRows {
+            row.frame = NSRect(x: 10, y: y, width: HUDMenuPanel.rowWidth, height: row.frame.height)
+            y += row.frame.height + 1
+        }
+        container.frame = NSRect(x: 0, y: 0, width: HUDMenuPanel.width, height: y + 8)
+    }
+
+    private func render(item: NSMenuItem, into container: NSView) {
         if item.isSeparatorItem {
-            stack.addArrangedSubview(divider())
+            container.addSubview(divider())
             return
         }
         if item.identifier?.rawValue == "minibar.sectionHeader" {
-            stack.addArrangedSubview(headerRow(item.title))
+            container.addSubview(headerRow(item.title))
             return
         }
         if let view = item.view {
-            stack.addArrangedSubview(wrap(view))
+            container.addSubview(view)
             return
         }
         if item.submenu != nil {
             let row = expanderRow(item)
             rowsById[ObjectIdentifier(item)] = row
-            stack.addArrangedSubview(row)
+            container.addSubview(row)
             return
         }
         let row = actionRow(item)
         rowsById[ObjectIdentifier(item)] = row
-        stack.addArrangedSubview(row)
+        container.addSubview(row)
     }
 
     // MARK: - 浮层卡片（z 轴堆栈：不推挤面板，浮在后续行之上）
@@ -162,7 +163,7 @@ final class HUDMenuPanel: NSPanel {
               let anchorRow = rowsById[ObjectIdentifier(item)] else { return }
         hideOverlay()
 
-        let card = NSView()
+        let card = FlippedView()
         card.wantsLayer = true
         // 比主面板深一档（不 100% 不透明），重叠处文字仍清晰
         card.layer?.backgroundColor = NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 0.88).cgColor
@@ -174,34 +175,26 @@ final class HUDMenuPanel: NSPanel {
         card.layer?.shadowRadius = 12
         card.layer?.masksToBounds = false
 
-        let cardStack = NSStackView()
-        cardStack.orientation = .vertical
-        cardStack.alignment = .leading
-        cardStack.spacing = 1
-        cardStack.edgeInsets = NSEdgeInsets(top: 4, left: 4, bottom: 4, right: 4)
-        cardStack.translatesAutoresizingMaskIntoConstraints = false
-        card.addSubview(cardStack)
-
         let cardWidth = HUDMenuPanel.rowWidth - 26
+        var y: CGFloat = 4
         for child in submenu.items where !child.isSeparatorItem {
-            cardStack.addArrangedSubview(overlayRow(child, cardWidth: cardWidth - 8))
+            let row = overlayRow(child, rowWidth: cardWidth - 8)
+            row.frame = NSRect(x: 4, y: y, width: cardWidth - 8, height: row.frame.height)
+            y += row.frame.height + 1
+            card.addSubview(row)
         }
+        card.frame = NSRect(x: 40, y: 0, width: cardWidth, height: y + 4)
 
         container.addSubview(card, positioned: .above, relativeTo: nil)
-        card.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            card.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 30),
-            card.widthAnchor.constraint(equalToConstant: cardWidth),
-        ])
+        // 定位：锚行正下方，浮在后续行之上（容器翻转坐标：origin.y 即视觉顶部）
+        let anchorFrame = anchorRow.frame
+        card.frame.origin.y = anchorFrame.maxY + 2
         overlayCard = card
 
-        // 定位：锚行正下方，浮在后续行之上
-        container.layoutSubtreeIfNeeded()
-        let cardHeight = cardStack.fittingSize.height + 8
-        let anchorFrame = anchorRow.convert(anchorRow.bounds, to: container)
-        card.heightAnchor.constraint(equalToConstant: cardHeight).isActive = true
-        card.topAnchor.constraint(equalTo: container.topAnchor,
-                                  constant: anchorFrame.maxY + 2).isActive = true
+        // 浮层锚行箭头翻转
+        if let arrow = expanderArrows[ObjectIdentifier(item)] {
+            arrow.layer?.transform = CATransform3DMakeRotation(.pi, 0, 0, 1)
+        }
 
         // 点浮层外（面板内）自动收起
         overlayMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
@@ -210,12 +203,18 @@ final class HUDMenuPanel: NSPanel {
             let inContainer = container.convert(inWindow, from: nil)
             let inCard = card.frame.contains(inContainer)
             let inAnchor = anchorRow.frame.contains(inContainer)
-            if !inCard && !inAnchor { self.collapseOverlay() }
+            if !inCard && !inAnchor {
+                self.collapseOverlay()
+            }
             return event
         }
     }
 
     private func collapseOverlay() {
+        if let item = rowsById.first(where: { $0.value === overlayCard }).map({ $0.key }) { _ = item }
+        if let arrow = expanderArrows.first(where: { ObjectIdentifier($1) == expanded }).map({ $1 }) {
+            arrow.layer?.transform = CATransform3DIdentity
+        }
         expanded = nil
         hideOverlay()
     }
@@ -227,41 +226,52 @@ final class HUDMenuPanel: NSPanel {
             NSEvent.removeMonitor(overlayMonitor)
             self.overlayMonitor = nil
         }
+        expanderArrows.values.forEach { $0.layer?.transform = CATransform3DIdentity }
     }
 
     /// 浮层行：图标 + 名称 + 标签 + 右侧开关（单选互斥在点击后同步）
-    private func overlayRow(_ item: NSMenuItem, cardWidth: CGFloat) -> NSView {
-        let row = HoverCardView(frame: NSRect(x: 0, y: 0, width: cardWidth, height: 24))
+    private func overlayRow(_ item: NSMenuItem, rowWidth: CGFloat) -> NSView {
+        let height: CGFloat = 24
+        let row = HoverCardView(frame: NSRect(x: 0, y: 0, width: rowWidth, height: height))
 
         let icon = NSImageView(image: item.image ?? NSImage())
         icon.contentTintColor = .secondaryLabelColor
-        let title = NSTextField(labelWithString: item.title)
+        icon.frame = NSRect(x: 8, y: (height - 13) / 2, width: 13, height: 13)
+
+        // 设备行标题格式 "名称 · 类型"：类型拆出来放右侧（开关左侧）
+        let parts = item.title.components(separatedBy: " · ")
+        let nameText = parts.first ?? item.title
+        let tagText: String? = parts.count > 1 ? parts.last : nil
+
+        let title = NSTextField(labelWithString: nameText)
         title.font = NSFont.systemFont(ofSize: 12)
         title.lineBreakMode = .byTruncatingMiddle
-
-        let stack = NSStackView(views: [icon, title])
-        stack.orientation = .horizontal
-        stack.alignment = .centerY
-        stack.spacing = 8
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        row.addSubview(stack)
 
         let sw = NSSwitch()
         sw.controlSize = .mini
         sw.state = item.state == .on ? .on : .off
-        sw.translatesAutoresizingMaskIntoConstraints = false
-        row.addSubview(sw)
+        let swSize = sw.intrinsicContentSize
+        sw.frame = NSRect(x: rowWidth - swSize.width - 6, y: (height - swSize.height) / 2,
+                          width: swSize.width, height: swSize.height)
         switchMap[ObjectIdentifier(sw)] = (sw, item)
         sw.target = self
         sw.action = #selector(switchFlipped(_:))
 
-        NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: row.leadingAnchor, constant: 8),
-            stack.centerYAnchor.constraint(equalTo: row.centerYAnchor),
-            stack.trailingAnchor.constraint(lessThanOrEqualTo: sw.leadingAnchor, constant: -6),
-            sw.centerYAnchor.constraint(equalTo: row.centerYAnchor),
-            sw.trailingAnchor.constraint(equalTo: row.trailingAnchor, constant: -6),
-        ])
+        row.addSubview(icon)
+        row.addSubview(title)
+        row.addSubview(sw)
+
+        if let tagText {
+            let tag = NSTextField(labelWithString: tagText)
+            tag.font = NSFont.monospacedSystemFont(ofSize: 9, weight: .regular)
+            tag.textColor = .tertiaryLabelColor
+            tag.frame = NSRect(x: sw.frame.minX - 64, y: (height - 13) / 2, width: 58, height: 13)
+            tag.alignment = .right
+            row.addSubview(tag)
+            title.frame.size.width = sw.frame.minX - 64 - 26 - 8
+        } else {
+            title.frame.size.width = sw.frame.minX - 26 - 8
+        }
         return row
     }
 
@@ -284,6 +294,8 @@ final class HUDMenuPanel: NSPanel {
 
     private func expanderRow(_ item: NSMenuItem) -> NSView {
         let row = rowBase(item: item, chevron: "chevron.down")
+        let arrow = row.subviews.compactMap { $0 as? NSImageView }.last
+        if let arrow { expanderArrows[ObjectIdentifier(item)] = arrow }
         row.onClick = { [weak self] in
             guard let self else { return }
             let id = ObjectIdentifier(item)
@@ -345,86 +357,55 @@ final class HUDMenuPanel: NSPanel {
     // MARK: - 行构造
 
     private func rowBase(item: NSMenuItem, chevron: String?) -> HoverCardView {
-        let row = HoverCardView(frame: NSRect(x: 0, y: 0, width: HUDMenuPanel.rowWidth, height: 26))
+        let height: CGFloat = 26
+        let row = HoverCardView(frame: NSRect(x: 0, y: 0, width: HUDMenuPanel.rowWidth, height: height))
         row.wantsLayer = true
 
         let icon = NSImageView(image: item.image ?? NSImage())
         icon.contentTintColor = .secondaryLabelColor
-        let iconWidth: CGFloat = item.image == nil ? 0 : 18
-        icon.translatesAutoresizingMaskIntoConstraints = false
+        let iconWidth: CGFloat = item.image == nil ? 0 : 16
+        icon.frame = NSRect(x: 10, y: (height - 15) / 2, width: iconWidth, height: 15)
 
+        var textX = 10 + iconWidth + (iconWidth > 0 ? 8 : 0)
         let title = NSTextField(labelWithString: item.title)
         title.font = NSFont.systemFont(ofSize: 13)
         title.textColor = item.isEnabled ? .labelColor : .tertiaryLabelColor
         title.lineBreakMode = .byTruncatingMiddle
-        title.translatesAutoresizingMaskIntoConstraints = false
 
-        let stack = NSStackView(views: [icon, title])
-        stack.orientation = .horizontal
-        stack.alignment = .centerY
-        stack.spacing = 8
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        row.addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: row.leadingAnchor, constant: 10),
-            stack.centerYAnchor.constraint(equalTo: row.centerYAnchor),
-            icon.widthAnchor.constraint(equalToConstant: iconWidth),
-        ])
-
+        var trailingReservation: CGFloat = 10
+        if !item.keyEquivalent.isEmpty {
+            let key = NSTextField(labelWithString: "⌘\(item.keyEquivalent.uppercased())")
+            key.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
+            key.textColor = .tertiaryLabelColor
+            key.frame = NSRect(x: HUDMenuPanel.rowWidth - 40, y: (height - 13) / 2, width: 34, height: 13)
+            key.alignment = .right
+            row.addSubview(key)
+            trailingReservation = 48
+        }
         if let chevron {
             let arrow = NSImageView(image: NSImage(systemSymbolName: chevron,
                                                    accessibilityDescription: nil)!)
             arrow.contentTintColor = .tertiaryLabelColor
-            arrow.translatesAutoresizingMaskIntoConstraints = false
+            arrow.frame = NSRect(x: HUDMenuPanel.rowWidth - 24, y: (height - 11) / 2, width: 12, height: 11)
             row.addSubview(arrow)
-            NSLayoutConstraint.activate([
-                arrow.centerYAnchor.constraint(equalTo: row.centerYAnchor),
-                arrow.trailingAnchor.constraint(equalTo: row.trailingAnchor, constant: -10),
-                arrow.widthAnchor.constraint(equalToConstant: 12),
-            ])
-            stack.trailingAnchor.constraint(lessThanOrEqualTo: arrow.leadingAnchor, constant: -6).isActive = true
-        } else if !item.keyEquivalent.isEmpty {
-            let key = NSTextField(labelWithString: "⌘\(item.keyEquivalent.uppercased())")
-            key.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
-            key.textColor = .tertiaryLabelColor
-            key.translatesAutoresizingMaskIntoConstraints = false
-            row.addSubview(key)
-            NSLayoutConstraint.activate([
-                key.centerYAnchor.constraint(equalTo: row.centerYAnchor),
-                key.trailingAnchor.constraint(equalTo: row.trailingAnchor, constant: -10),
-            ])
-        } else {
-            title.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-            stack.trailingAnchor.constraint(lessThanOrEqualTo: row.trailingAnchor, constant: -10).isActive = true
+            trailingReservation = max(trailingReservation, 28)
         }
+
+        let textWidth = HUDMenuPanel.rowWidth - textX - trailingReservation
+        title.frame = NSRect(x: textX, y: (height - 16) / 2, width: max(textWidth, 40), height: 16)
+        row.addSubview(icon)
+        row.addSubview(title)
         return row
     }
 
-    private func wrap(_ view: NSView) -> NSView {
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: HUDMenuPanel.rowWidth, height: view.frame.height))
-        view.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(view)
-        NSLayoutConstraint.activate([
-            view.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            view.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            view.topAnchor.constraint(equalTo: container.topAnchor),
-            view.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-        ])
-        return container
-    }
-
     private func headerRow(_ title: String) -> NSView {
+        let height: CGFloat = 22
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: HUDMenuPanel.rowWidth, height: height))
         let label = NSTextField(labelWithString: title)
         label.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .semibold)
         label.textColor = .tertiaryLabelColor
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: HUDMenuPanel.rowWidth, height: 22))
-        label.translatesAutoresizingMaskIntoConstraints = false
+        label.frame = NSRect(x: 10, y: (height - 13) / 2, width: HUDMenuPanel.rowWidth - 20, height: 13)
         container.addSubview(label)
-        NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 10),
-            label.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-        ])
         return container
     }
 
@@ -457,13 +438,9 @@ final class HUDMenuPanel: NSPanel {
             flash.wantsLayer = true
             flash.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.4).cgColor
             flash.layer?.cornerRadius = 4
-            flash.translatesAutoresizingMaskIntoConstraints = false
+            flash.frame = NSRect(x: row.frame.width - 150, y: 4, width: 140, height: 18)
+            flash.alignment = .center
             row.addSubview(flash)
-            NSLayoutConstraint.activate([
-                flash.centerYAnchor.constraint(equalTo: row.centerYAnchor),
-                flash.trailingAnchor.constraint(equalTo: row.trailingAnchor, constant: -8),
-                flash.widthAnchor.constraint(greaterThanOrEqualToConstant: 60),
-            ])
             Timer.scheduledTimer(withTimeInterval: 1.4, repeats: false) { _ in
                 flash.removeFromSuperview()
             }
