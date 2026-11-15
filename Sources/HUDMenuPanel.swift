@@ -1,9 +1,12 @@
 import AppKit
 import SwiftUI
 
-/// 自绘 HUD 菜单（1.0.2 渲染器 v2：SwiftUI 渲染）：
-/// 模块仍以 NSMenu 树申报（menuSection() 零改动），NSHostingView 把树转成声明式布局——
-/// 浮层堆栈 / 开关行 / 阻尼 hover / 数值角标全部确定性，不再手排坐标。
+/// 自绘 HUD 菜单（1.0.2 渲染器 v3，层级定稿）：
+/// 层级关系 = Section > Block > 行。
+///   Section：6 个分区（节标题 + 分界线），永远完整呈现；
+///   Block：Section 内的可展开块（画质模式/扬声器/麦克风），展开 = 就地插入子行，手风琴单开；
+///   行：开关行 / 动作行 / 滑杆行。
+/// 模块仍以 NSMenu 树申报（menuSection() 零改动），SwiftUI 声明式渲染。
 /// NSMenu 仅作为数据模型存在，不再显示。
 final class HUDMenuPanel: NSPanel {
     static let width: CGFloat = 320
@@ -27,7 +30,6 @@ final class HUDMenuPanel: NSPanel {
         isMovableByWindowBackground = false
     }
 
-    /// 面板内容：毛玻璃层（AppKit）+ SwiftUI 内容层
     private func installContent(menu: NSMenu) {
         let blur = NSVisualEffectView()
         blur.material = .hudWindow
@@ -82,7 +84,7 @@ final class HUDMenuPanel: NSPanel {
         }
     }
 
-    // MARK: - 关闭监听（面板外点击 / Esc）
+    // MARK: - 监听（面板外点击 / Esc / 行内提示桥接）
 
     private func installMonitors() {
         let clickMonitor = NSEvent.addGlobalMonitorForEvents(
@@ -100,7 +102,7 @@ final class HUDMenuPanel: NSPanel {
         }
         monitors = [clickMonitor, keyMonitor as Any]
 
-        // 模块行内提示（阻断警示等）：桥接进 SwiftUI 状态
+        // 模块行内提示（阻断警示等）：桥接进 SwiftUI 状态，1.4s 自动清除
         hintObserver = NotificationCenter.default.addObserver(
             forName: ModuleEvent.rowHint, object: nil, queue: .main
         ) { [weak self] note in
@@ -108,42 +110,92 @@ final class HUDMenuPanel: NSPanel {
                   let item = note.userInfo?["item"] as? NSMenuItem,
                   let text = note.userInfo?["text"] as? String else { return }
             let warn = (note.userInfo?["warn"] as? Bool) ?? false
-            guard let host = (contentView as? NSView)?.subviews.compactMap({ $0 as? NSHostingView<HUDMenuContent> }).first else { return }
+            guard let host = (contentView as? NSView)?.subviews
+                .compactMap({ $0 as? NSHostingView<HUDMenuContent> }).first else { return }
             var root = host.rootView
             root.hintItem = ObjectIdentifier(item)
             root.hintText = text
             root.hintWarn = warn
             host.rootView = root
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+                var cleared = host.rootView
+                guard cleared.hintItem == ObjectIdentifier(item) else { return }
+                cleared.hintItem = nil
+                cleared.hintText = ""
+                host.rootView = cleared
+            }
         }
     }
 }
 
-// MARK: - SwiftUI 内容
+// MARK: - SwiftUI 内容（Section > Block > 行）
 
 private struct HUDMenuContent: View {
     let menu: NSMenu
     var onDismiss: (() -> Void)?
 
-    @State private var expandedID: ObjectIdentifier?
+    @State private var expandedBlockID: ObjectIdentifier?
     @State private var appeared = false
-    // 行内提示（阻断警示），按 item 定位
     var hintItem: ObjectIdentifier?
     var hintText: String = ""
     var hintWarn = false
 
-    private let itemSpacing: CGFloat = 1
+    // MARK: 层级解析：Section > Block > 行
+
+    private struct Block {
+        let item: NSMenuItem
+        let children: [NSMenuItem]
+    }
+
+    private struct SectionData {
+        var title: String?
+        var rows: [NSMenuItem] = []
+        var blocks: [Block] = []
+        var isEmpty: Bool { title == nil && rows.isEmpty && blocks.isEmpty }
+    }
+
+    private var sections: [(section: SectionData, isFooter: Bool)] {
+        var result: [(SectionData, Bool)] = []
+        var current = SectionData()
+        var isFooter = false
+        for item in menu.items {
+            if item.identifier?.rawValue == "minibar.sectionHeader" {
+                if !current.isEmpty { result.append((current, isFooter)) }
+                current = SectionData()
+                current.title = item.title
+                isFooter = false
+            } else if item.isSeparatorItem {
+                if !current.isEmpty { result.append((current, isFooter)) }
+                current = SectionData()
+                isFooter = true // 分界线之后是设置/退出锚点区
+            } else if item.submenu != nil {
+                let children = (item.submenu?.items.filter { !$0.isSeparatorItem }) ?? []
+                current.blocks.append(Block(item: item, children: children))
+            } else {
+                current.rows.append(item)
+            }
+        }
+        if !current.isEmpty { result.append((current, isFooter)) }
+        return result
+    }
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            VStack(alignment: .leading, spacing: itemSpacing) {
-                ForEach(Array(menu.items.enumerated()), id: \.offset) { _, item in
+        VStack(alignment: .leading, spacing: 1) {
+            ForEach(Array(sections.enumerated()), id: \.offset) { _, pair in
+                if let title = pair.section.title {
+                    sectionHeader(title)
+                }
+                ForEach(Array(pair.section.rows.enumerated()), id: \.offset) { _, item in
                     row(item)
                 }
-            }
-            // 浮层卡片：z 轴堆栈，锚在展开行下方，不推挤面板
-            if let expander = expandedItem {
-                overlayCard(expander)
-                    .offset(y: offsetForOverlay(expander))
+                ForEach(Array(pair.section.blocks.enumerated()), id: \.offset) { _, block in
+                    blockHeader(block.item)
+                    if expandedBlockID == ObjectIdentifier(block.item) {
+                        ForEach(Array(block.children.enumerated()), id: \.offset) { _, child in
+                            childRow(child, siblings: block.children)
+                        }
+                    }
+                }
             }
         }
         .padding(.horizontal, 10)
@@ -154,29 +206,9 @@ private struct HUDMenuContent: View {
             withAnimation(.easeOut(duration: 0.15)) { appeared = true }
         }
         .background(Color.clear.onTapGesture {
-            expandedID = nil   // 点面板内其他区域：浮层收起
+            expandedBlockID = nil   // 点面板内其他区域：Block 收起
         })
-    }
-
-    private var expandedItem: NSMenuItem? {
-        menu.items.first { ObjectIdentifier($0) == expandedID }
-    }
-
-    /// 浮层 y 偏移 = 展开行上方所有行的累计高度（行高全部固定，可精确计算）
-    private func offsetForOverlay(_ expander: NSMenuItem) -> CGFloat {
-        var offset: CGFloat = 6
-        for item in menu.items {
-            if ObjectIdentifier(item) == expandedID { break }
-            offset += rowHeight(item) + itemSpacing
-        }
-        return offset + rowHeight(expander) + 2
-    }
-
-    private func rowHeight(_ item: NSMenuItem) -> CGFloat {
-        if item.isSeparatorItem { return 1 }
-        if item.identifier?.rawValue == "minibar.sectionHeader" { return 22 }
-        if item.view != nil { return 30 }
-        return 26
+        .animation(.easeOut(duration: 0.2), value: expandedBlockID)
     }
 
     // MARK: - 行分发
@@ -184,75 +216,79 @@ private struct HUDMenuContent: View {
     @ViewBuilder private func row(_ item: NSMenuItem) -> some View {
         if item.isSeparatorItem {
             Rectangle().fill(Color.white.opacity(0.08)).frame(height: 1)
-        } else if item.identifier?.rawValue == "minibar.sectionHeader" {
-            Text(item.title)
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .tracking(1.6)
-                .foregroundStyle(.tertiary)
-                .padding(.vertical, 4)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        } else if let view = item.view {
-            AppKitRow(view: view)
-        } else if item.submenu != nil {
-            ExpanderRow(item: item,
-                        isExpanded: ObjectIdentifier(item) == expandedID,
-                        hasHint: hintItem == ObjectIdentifier(item),
-                        onToggle: {
-                            expandedID = (expandedID == ObjectIdentifier(item)) ? nil : ObjectIdentifier(item)
-                        })
+        } else if item.view != nil {
+            AppKitRow(view: item.view!)
         } else if item.identifier?.rawValue == "minibar.confirmEjectAll" {
-            ConfirmEjectAllRow(item: item) { dismissPanel() }
+            ConfirmEjectAllRow(item: item) { onDismiss?() }
         } else if item.identifier?.rawValue == "minibar.switch" {
-            MenuSwitchRow(item: item, showsCheck: false,
-                          onFlip: { flipped in send(item, flipped) })
+            MenuSwitchRow(item: item,
+                          hint: hintItem == ObjectIdentifier(item) ? hintText : nil,
+                          hintWarn: hintWarn,
+                          onFlip: { _ in send(item) })
         } else {
             ActionRow(item: item,
                       hasHint: hintItem == ObjectIdentifier(item),
                       hintText: hintItem == ObjectIdentifier(item) ? hintText : "",
                       hintWarn: hintWarn,
                       onAction: {
-                          send(item, true)
-                          dismissPanel()
+                          send(item)
+                          onDismiss?()
                       })
         }
     }
 
-    private func send(_ item: NSMenuItem, _ flipped: Bool) {
+    private func send(_ item: NSMenuItem) {
         if let target = item.target, let action = item.action {
             NSApp.sendAction(action, to: target, from: item)
         }
     }
 
-    private func dismissPanel() {
-        onDismiss?()
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+            .tracking(1.6)
+            .foregroundStyle(.tertiary)
+            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - 浮层卡片
-
-    @ViewBuilder private func overlayCard(_ expander: NSMenuItem) -> some View {
-        if let submenu = expander.submenu {
-            VStack(alignment: .leading, spacing: itemSpacing) {
-                ForEach(Array(submenu.items.enumerated()), id: \.offset) { _, child in
-                    if !child.isSeparatorItem {
-                        MenuSwitchRow(item: child, showsCheck: false,
-                                      onFlip: { flipped in send(child, flipped) })
-                    }
+    /// Block 头：名称 + 向下箭头，点击就地展开/收起子行
+    @ViewBuilder private func blockHeader(_ item: NSMenuItem) -> some View {
+        let expanded = expandedBlockID == ObjectIdentifier(item)
+        Hoverable(content:
+            HStack(spacing: 8) {
+                if let image = item.image {
+                    Image(nsImage: image).resizable().frame(width: 15, height: 15)
+                        .foregroundStyle(.secondary)
                 }
+                Text(item.title).font(.system(size: 13)).lineLimit(1)
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.tertiary)
+                    .rotationEffect(.degrees(expanded ? 180 : 0))
             }
-            .padding(4)
-            .frame(width: HUDMenuPanel.width - 56, alignment: .leading)
-            .background(Color(red: 0.12, green: 0.12, blue: 0.14).opacity(0.88))
-            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.white.opacity(0.09)))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .shadow(color: .black.opacity(0.5), radius: 12)
-            .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
-        }
+        ) { expandedBlockID = expanded ? nil : ObjectIdentifier(item) }
+    }
+
+    /// Block 子行：右侧开关，单选互斥（输出设备/旋转/画质模式天然只有一个）
+    @ViewBuilder private func childRow(_ child: NSMenuItem, siblings: [NSMenuItem]) -> some View {
+        MenuSwitchRow(item: child,
+                      hint: nil, hintWarn: false,
+                      onFlip: { flipped in
+                          send(child)
+                          if flipped {
+                              for sibling in siblings where sibling !== child {
+                                  sibling.state = .off
+                              }
+                          }
+                      })
     }
 }
 
 // MARK: - 行组件
 
-/// 悬停阻尼 + 点击行
+/// 悬停阻尼 + 点击
 private struct Hoverable<Content: View>: View {
     let content: Content
     var onClick: (() -> Void)?
@@ -275,14 +311,16 @@ private struct Hoverable<Content: View>: View {
 /// 开关行（菜单行真开关，PRD §3.6）
 private struct MenuSwitchRow: View {
     let item: NSMenuItem
-    var showsCheck = true
+    var hint: String?
+    var hintWarn = false
     var onFlip: (Bool) -> Void
 
     @State private var isOn: Bool
 
-    init(item: NSMenuItem, showsCheck: Bool, onFlip: @escaping (Bool) -> Void) {
+    init(item: NSMenuItem, hint: String?, hintWarn: Bool, onFlip: @escaping (Bool) -> Void) {
         self.item = item
-        self.showsCheck = showsCheck
+        self.hint = hint
+        self.hintWarn = hintWarn
         self.onFlip = onFlip
         _isOn = State(initialValue: item.state == .on)
     }
@@ -296,6 +334,16 @@ private struct MenuSwitchRow: View {
                 }
                 Text(item.title).font(.system(size: 13)).lineLimit(1)
                 Spacer(minLength: 8)
+                if let hint {
+                    Text(hint)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(hintWarn ? Color(red: 1, green: 0.71, blue: 0.33)
+                                                  : Color(red: 0.49, green: 0.89, blue: 0.66))
+                        .padding(.horizontal, 5).padding(.vertical, 2)
+                        .background(Color.black.opacity(0.4))
+                        .cornerRadius(4)
+                        .transition(.opacity)
+                }
                 Toggle("", isOn: $isOn)
                     .labelsHidden()
                     .toggleStyle(.switch)
@@ -303,6 +351,7 @@ private struct MenuSwitchRow: View {
                     .onChange(of: isOn) { _, newValue in onFlip(newValue) }
             }
         )
+        .animation(.easeOut(duration: 0.2), value: hint != nil)
     }
 }
 
@@ -342,43 +391,6 @@ private struct ActionRow: View {
             }
         ) { onAction() }
         .animation(.easeOut(duration: 0.2), value: hasHint)
-    }
-
-    init(item: NSMenuItem, hasHint: Bool, hintText: String, hintWarn: Bool,
-         onAction: @escaping () -> Void) {
-        self.item = item
-        self.hasHint = hasHint
-        self.hintText = hintText
-        self.hintWarn = hintWarn
-        self.onAction = onAction
-    }
-}
-
-/// 展开行（向下箭头）
-private struct ExpanderRow: View {
-    let item: NSMenuItem
-    let isExpanded: Bool
-    var hasHint = false
-    var onToggle: () -> Void
-
-    @State private var hovering = false
-
-    var body: some View {
-        Hoverable(content:
-            HStack(spacing: 8) {
-                if let image = item.image {
-                    Image(nsImage: image).resizable().frame(width: 15, height: 15)
-                        .foregroundStyle(.secondary)
-                }
-                Text(item.title).font(.system(size: 13)).lineLimit(1)
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.tertiary)
-                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
-                    .animation(.easeOut(duration: 0.22), value: isExpanded)
-            }
-        ) { onToggle() }
     }
 }
 
