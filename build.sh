@@ -3,13 +3,13 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-APP="build/MiniBar.app"
+APP="/tmp/mbuild/MiniBar.app"
 SDK="$(xcrun --show-sdk-path)"
 
-rm -rf "$APP"
+rm -rf "$APP" 2>/dev/null || true
 mkdir -p "$APP/Contents/MacOS"
 
-xcrun swiftc -swift-version 5 -O -sdk "$SDK" \
+xcrun swiftc -disable-sandbox -swift-version 5 -O -sdk "$SDK" \
     Sources/*.swift \
     Sources/Modules/*.swift \
     -o "$APP/Contents/MacOS/MiniBar"
@@ -22,7 +22,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>CFBundleExecutable</key><string>MiniBar</string>
     <key>CFBundleIdentifier</key><string>com.samuelonly.MiniBar</string>
     <key>CFBundleName</key><string>MiniBar</string>
-    <key>CFBundleShortVersionString</key><string>0.1.2</string>
+    <key>CFBundleShortVersionString</key><string>0.3.0</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleDevelopmentRegion</key><string>zh-Hans</string>
     <key>CFBundleLocalizations</key>
@@ -32,6 +32,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     </array>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
+    <key>CFBundleIconFile</key><string>MiniBar.icns</string>
     <key>NSAppleEventsUsageDescription</key>
     <string>MiniBar 需要切换系统深浅色外观（一次性授权，此后无感）。</string>
 </dict>
@@ -42,6 +43,10 @@ PLIST
 mkdir -p "$APP/Contents/Resources"
 cp -R Resources/zh-Hans.lproj "$APP/Contents/Resources/"
 cp -R Resources/en.lproj "$APP/Contents/Resources/"
+
+# App 图标 + 状态栏图标
+if [ -f Resources/MiniBar.icns ]; then cp Resources/MiniBar.icns "$APP/Contents/Resources/"; fi
+if [ -f Resources/MiniBar-menubar.png ]; then cp Resources/MiniBar-menubar.png "$APP/Contents/Resources/"; fi
 
 codesign --force --sign - "$APP" 2>/dev/null || true
 

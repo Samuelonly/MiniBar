@@ -1,0 +1,55 @@
+/* MiniBar · Deutsch */
+
+"settings.title" = "MINIBAR · Einstellungen";
+"settings.note.effective" = "Nur aktivieren, was Sie brauchen.";
+"settings.note.noResident" = "Aus = verschwindet aus dem Panel, belegt keinen Speicher.";
+"settings.section.modules" = "Module";
+
+"module.display.title" = "Bildschirm";
+"module.display.subtitle" = "Helligkeit · Kontrast · Drehung";
+"module.state.title" = "Erscheinungsbild";
+"module.state.subtitle" = "Dunkelmodus · Night Shift";
+"menu.nightshift" = "Night Shift";
+"module.power.title" = "Energie";
+"module.power.subtitle" = "Bildschirmruhe · Systemruhe · Wachhalten";
+"module.audio.title" = "Audio";
+"module.audio.subtitle" = "Stumm · Ausgabe/Mikrofon umschalten";
+"module.storage.title" = "Speicher";
+"module.storage.subtitle" = "Sicheres Auswerfen pro Laufwerk · Einhängen";
+
+"settings.version.check" = "Auf Updates prüfen";
+"settings.version.latest" = "Aktuell v%@";
+"settings.version.available" = "Neue Version %@ ↗";
+"settings.version.none" = "Noch keine Releases";
+"settings.version.retry" = "Offline, tippen zum Wiederholen";
+"settings.version.checking" = "Prüfen…";
+
+"menu.section.display" = "BILDSCHIRM";
+"menu.display.brightness" = "Helligkeit";
+"menu.display.contrast" = "Kontrast";
+"menu.display.rotation" = "Drehung";
+"menu.rotation.landscape" = "Querformat";
+"menu.rotation.portrait" = "Hochformat";
+"menu.section.appearance" = "ERSCHEINUNGSBILD";
+"menu.section.power" = "ENERGIE";
+"menu.power.screenSleep" = "Bildschirmruhe";
+"menu.power.systemSleep" = "Systemruhe";
+"menu.power.keepAwake" = "Wachhalten";
+"menu.section.audio" = "AUDIO";
+"menu.audio.mute" = "Alles stumm";
+"menu.audio.speakers" = "Lautsprecher";
+"menu.audio.microphones" = "Mikrofone";
+"menu.section.storage" = "SPEICHER";
+"menu.storage.ejectAll" = "Alle sicher auswerfen";
+"menu.storage.ejectAllConfirm" = "Alle auswerfen — bestätigen?";
+"menu.storage.empty" = "Keine externen Laufwerke";
+"menu.hint.blockedByKeepAwake" = "⚠ Zuerst Wachhalten deaktivieren";
+"menu.settings" = "Einstellungen";
+"menu.quit" = "MiniBar beenden";
+"menu.footer.note" = "Jedes Modul kann jederzeit geladen oder deaktiviert werden";
+"menu.mic.inputLevel" = "Eingangspegel";
+"menu.appearance.dark" = "Dunkel";
+"menu.appearance.light" = "Hell";
+
+"menu.display.pictureMode" = "Bildmodus";
+"menu.display.modeItem" = "Modus %d";

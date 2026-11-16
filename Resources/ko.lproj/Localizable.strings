@@ -1,0 +1,55 @@
+/* MiniBar · 한국어 */
+
+"settings.title" = "MINIBAR · 설정";
+"settings.note.effective" = "필요한 것만 켜세요.";
+"settings.note.noResident" = "끄면 패널에서 사라지고 메모리도 해제됩니다.";
+"settings.section.modules" = "모듈";
+
+"module.display.title" = "디스플레이";
+"module.display.subtitle" = "밝기 · 대비 · 회전";
+"module.state.title" = "외형";
+"module.state.subtitle" = "다크 모드 · Night Shift";
+"menu.nightshift" = "Night Shift";
+"module.power.title" = "전원";
+"module.power.subtitle" = "디스플레이 절전 · 시스템 절전 · 절전 방지";
+"module.audio.title" = "오디오";
+"module.audio.subtitle" = "음소거 · 출력/마이크 전환";
+"module.storage.title" = "저장소";
+"module.storage.subtitle" = "개별 드라이브 안전 제거 · 마운트 해제";
+
+"settings.version.check" = "업데이트 확인";
+"settings.version.latest" = "최신 버전입니다 v%@";
+"settings.version.available" = "새 버전 %@ ↗";
+"settings.version.none" = "아직 릴리스 없음";
+"settings.version.retry" = "오프라인, 탭해서 재시도";
+"settings.version.checking" = "확인 중…";
+
+"menu.section.display" = "디스플레이";
+"menu.display.brightness" = "밝기";
+"menu.display.contrast" = "대비";
+"menu.display.rotation" = "회전";
+"menu.rotation.landscape" = "가로";
+"menu.rotation.portrait" = "세로";
+"menu.section.appearance" = "외형";
+"menu.section.power" = "전원";
+"menu.power.screenSleep" = "디스플레이 절전";
+"menu.power.systemSleep" = "시스템 절전";
+"menu.power.keepAwake" = "절전 방지";
+"menu.section.audio" = "오디오";
+"menu.audio.mute" = "전체 음소거";
+"menu.audio.speakers" = "스피커";
+"menu.audio.microphones" = "마이크";
+"menu.section.storage" = "저장소";
+"menu.storage.ejectAll" = "모두 안전 제거";
+"menu.storage.ejectAllConfirm" = "모두 제거 — 확인?";
+"menu.storage.empty" = "외부 드라이브 없음";
+"menu.hint.blockedByKeepAwake" = "⚠ 먼저 절전 방지를 끄세요";
+"menu.settings" = "설정";
+"menu.quit" = "MiniBar 종료";
+"menu.footer.note" = "모든 모듈은 언제든 로드하거나 비활성화할 수 있습니다";
+"menu.mic.inputLevel" = "입력 레벨";
+"menu.appearance.dark" = "다크";
+"menu.appearance.light" = "라이트";
+
+"menu.display.pictureMode" = "화면 모드";
+"menu.display.modeItem" = "모드 %d";

@@ -1,14 +1,15 @@
 /* MiniBar · English */
 
 "settings.title" = "MINIBAR · SETTINGS";
-"settings.note.effective" = "Toggles apply instantly. Off means fully stopped.";
-"settings.note.noResident" = "Disabled modules leave no memory footprint, no background activity.";
+"settings.note.effective" = "Enable what you need.";
+"settings.note.noResident" = "Off means gone from the panel, using no memory.";
 "settings.section.modules" = "MODULES";
 
 "module.display.title" = "Display";
 "module.display.subtitle" = "Brightness · Contrast · Rotation";
 "module.state.title" = "Appearance";
 "module.state.subtitle" = "Dark Mode · Night Shift";
+"menu.nightshift" = "Night Shift";
 "module.power.title" = "Power";
 "module.power.subtitle" = "Display Sleep · System Sleep · Keep Awake";
 "module.audio.title" = "Audio";
@@ -45,6 +46,10 @@
 "menu.hint.blockedByKeepAwake" = "⚠ Turn off Keep Awake first";
 "menu.settings" = "Settings";
 "menu.quit" = "Quit MiniBar";
+"menu.footer.note" = "Every module can be loaded or disabled at any time";
+"menu.mic.inputLevel" = "Input level";
+"menu.appearance.dark" = "Dark";
+"menu.appearance.light" = "Light";
 
 "menu.display.pictureMode" = "Picture Mode";
 "menu.display.modeItem" = "Mode %d";

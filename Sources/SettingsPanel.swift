@@ -2,33 +2,105 @@ import AppKit
 import SwiftUI
 
 /// PRD §10 HUD 设置面板（C 档定稿视觉）：
-/// NSPanel 不抢前台焦点 + hudWindow 实时背景模糊 + 大圆角大阴影，
-/// 等宽大写节标题 / 键帽 chip / 0.15s 微淡入，外观跟随系统深浅色。
+/// NSPanel 不抢前台焦点 + 大圆角大阴影 + 等宽大写节标题。
+/// 皮肤与主面板一致（PanelAppearance）：未手动跟随系统，手动后记住选择。
 /// 纯 SwiftUI 勾选列表，勾选即实时生效（PRD §5），零 WebView。
 final class SettingsPanel: NSPanel {
-    static let size = NSSize(width: 380, height: 400)
+    static let width: CGFloat = 380
+    private var skinObserver: Any?
 
     init() {
+        // 窗口尺寸 = 内容实测尺寸。宽度固定 380，高度取换行后的自然高度，
+        // 以后加功能窗口自己长，不写死。
+        let probe = NSHostingView(rootView: SettingsContent(onClose: {}))
+        probe.translatesAutoresizingMaskIntoConstraints = false
+        probe.widthAnchor.constraint(equalToConstant: SettingsPanel.width).isActive = true
+        probe.layoutSubtreeIfNeeded()
+        let raw = probe.fittingSize.height
+        let contentH = (raw.isFinite && raw > 80) ? ceil(raw) : 420
+
         super.init(contentRect: NSRect(x: 0, y: 0,
-                                       width: SettingsPanel.size.width,
-                                       height: SettingsPanel.size.height),
-                   styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView, .closable],
+                                        width: SettingsPanel.width,
+                                        height: contentH),
+                   // borderless：无 title bar 安全区；关闭走自绘 ✕
+                   styleMask: [.borderless],
                    backing: .buffered, defer: false)
-        isReleasedWhenClosed = false
+
+        // 窗口透明，背景/圆角由 AppKit 容器图层画
         isOpaque = false
         backgroundColor = .clear
-        titlebarAppearsTransparent = true
-        titleVisibility = .hidden
-        title = "MiniBar 设置"
-        level = .floating
-        isMovableByWindowBackground = true
+        // 皮肤与主面板同一套规则（PanelAppearance）：未手动跟随系统，手动后记住选择
+        appearance = PanelAppearance.current.nsAppearance
+        hasShadow = true
+        // 必须用 statusBar 层级：MiniBar 是 LSUIElement 后台 app，从不 active，
+        // .floating 层级的面板会被系统排到前台 App 窗口之下（只能透过对方的
+        // 半透明区域看到我们，视觉上就像被蒙了一层纱）。statusBar 层级不受
+        // app 激活状态影响，永远在最前。
+        level = .statusBar
+        // NSPanel 默认 hidesOnDeactivate = true：MiniBar 是后台 app（LSUIElement）
+        // 从不 active，窗口一显示就被系统自动隐藏（NSWindow.isVisible 仍是 true，
+        // 但系统根本不合成它）。必须关掉。
+        hidesOnDeactivate = false
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
 
-        // 窗口尺寸 = SwiftUI 内容实测尺寸（intrinsic 驱动），底部不再被裁
-        let host = NSHostingView(rootView: SettingsContent())
-        host.frame = NSRect(x: 0, y: 0, width: SettingsPanel.size.width, height: 120)
-        host.sizingOptions = [.intrinsicContentSize]
-        contentView = host
+        // 背景用 AppKit 图层画，不依赖 SwiftUI 的 .background：
+        // 实测在 borderless NSPanel 里 SwiftUI 的背景只画出底部一小块，
+        // 其余区域 alpha=0（背后编辑器文字直接透出，用户看到的就是「透明度接近 0」）。
+        let container = NSView(frame: NSRect(x: 0, y: 0,
+                                             width: SettingsPanel.width, height: contentH))
+        container.wantsLayer = true
+        container.layer?.backgroundColor = PanelAppearance.current.backgroundNS.cgColor
+        container.layer?.cornerRadius = 14
+        container.layer?.masksToBounds = true
+        container.layer?.borderWidth = 1
+        container.layer?.borderColor = PanelAppearance.current.borderNS.cgColor
+
+        let host = NSHostingView(rootView: SettingsContent(onClose: { [weak self] in self?.close() }))
+        // 必须关掉 sizingOptions：默认行为会让 hosting view 用 intrinsic 尺寸反向改窗口，
+        // 与固定的 contentRect 冲突后内容被压成 0（窗口 visible 却什么都不画）
+        host.sizingOptions = []
+        // NSHostingView 不继承窗口的 appearance，必须单独指定，与皮肤一致
+        host.appearance = PanelAppearance.current.nsAppearance
+        host.frame = container.bounds
+        host.autoresizingMask = [.width, .height]
+        container.addSubview(host)
+        contentView = container
         center()
+
+        // 手动换肤 → 立即重绘；系统深浅色变化 → 未手动时跟随（applySkin 内部判断）
+        skinObserver = NotificationCenter.default.addObserver(
+            forName: PanelAppearance.changed, object: nil, queue: .main
+        ) { [weak self] _ in self?.applySkin() }
+        NSApp.addObserver(self, forKeyPath: "effectiveAppearance", options: [.new], context: nil)
+    }
+
+    /// 应用当前有效皮肤：窗口/托管 appearance + 容器底色描边 + 重建内容（colorScheme 随之更新）
+    private func applySkin() {
+        let skin = PanelAppearance.current
+        appearance = skin.nsAppearance
+        contentView?.layer?.backgroundColor = skin.backgroundNS.cgColor
+        contentView?.layer?.borderColor = skin.borderNS.cgColor
+        if let host = contentView?.subviews.first as? NSHostingView<SettingsContent> {
+            host.appearance = skin.nsAppearance
+            host.rootView = SettingsContent(onClose: { [weak self] in self?.close() })
+        }
+    }
+
+    override func observeValue(forKeyPath keyPath: String?, of object: Any?,
+                               change: [NSKeyValueChangeKey: Any]?,
+                               context: UnsafeMutableRawPointer?) {
+        if keyPath == "effectiveAppearance" { applySkin() }
+    }
+
+    deinit {
+        NSApp.removeObserver(self, forKeyPath: "effectiveAppearance")
+        if let skinObserver { NotificationCenter.default.removeObserver(skinObserver) }
+    }
+
+    /// nonactivatingPanel 不会 becomeKey，系统红 X 不派发 action
+    /// 这里 override close 让 SwiftUI 自定义按钮能正确关窗
+    override func close() {
+        orderOut(nil)
     }
 
     /// nonactivating：弹出不抢前台 App 焦点（PRD §10 遥控器哲学的物理体现）
@@ -90,6 +162,8 @@ private struct ModuleRow: View {
 // MARK: - 面板内容
 
 struct SettingsContent: View {
+    let onClose: () -> Void
+
     @AppStorage("module.display") private var display = true
     @AppStorage("module.state") private var state = true
     @AppStorage("module.power") private var power = true
@@ -186,11 +260,21 @@ struct SettingsContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // 标题行：等宽大写（NIL 同款）；不放键帽——面板是平的，无返回概念
-            Text(L("settings.title"))
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .tracking(1.6)
-                .foregroundStyle(.secondary)
+            // 标题行 + 自定义关闭按钮（borderless 窗口没有系统红 X）
+            HStack(alignment: .top) {
+                Text(L("settings.title"))
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .tracking(1.6)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 18, height: 18)
+                }
+                .buttonStyle(.plain)
+            }
             Divider()
 
             // PRD §10 文案纪律：功能说明置顶，用户语言，两行
@@ -234,24 +318,28 @@ struct SettingsContent: View {
                 Spacer()
                 Link("@Samuelonly", destination: URL(string: "https://github.com/Samuelonly")!)
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.link)
                 Text("·").font(.system(size: 10)).foregroundStyle(.tertiary)
                 Link("github.com/Samuelonly/MiniBar",
                      destination: URL(string: "https://github.com/Samuelonly/MiniBar")!)
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.link)
                 Spacer()
             }
-        .padding(.horizontal, 24)
+        }
+        // HTML：.panel{padding:10px} + .mod-row/.p-note{padding:6px} = 16
+        .padding(.horizontal, 16)
         .padding(.top, 28)
         .padding(.bottom, 20)
-        .frame(maxWidth: SettingsPanel.size.width, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .opacity(appeared ? 1 : 0)
-        .onAppear {
-            withAnimation(.easeOut(duration: 0.15)) { appeared = true }
-        }
+        // 宽度固定 380，高度由内容决定（窗口尺寸 = 这里的尺寸）
+        .frame(width: SettingsPanel.width, alignment: .leading)
+        // 背景与圆角：颜色随皮肤（容器图层也画了一遍底色，双保险不透明）
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(PanelAppearance.current.background)
+        )
+        // 文字、次级文字、分隔线、开关全部由 colorScheme 驱动，两套皮肤真切换
+        .environment(\.colorScheme, PanelAppearance.current.colorScheme)
+        // 不做淡入动画：NSHostingView 在 borderless 窗口里 onAppear 时机不稳定
     }
-}
-
 }

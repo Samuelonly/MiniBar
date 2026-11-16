@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MiniBar — Menu bar essentials for macOS</title>
+<style>
+  :root{
+    --bg:#0E0E10; --card:#1C1C20; --line:rgba(255,255,255,.09);
+    --txt:#F2F2F5; --dim:#9A9AA0; --faint:#6E6E75; --accent:#4D9DFF;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"PingFang SC",sans-serif;
+    line-height:1.65;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:980px;margin:0 auto;padding:0 28px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  header{display:flex;align-items:center;justify-content:space-between;padding:26px 0}
+  .brand{font-weight:700;font-size:18px;letter-spacing:.4px}
+  .brand span{color:var(--accent)}
+  #langLink{font-size:14px;font-weight:500}
+
+  .hero{padding:64px 0 40px;text-align:center}
+  .eyebrow{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:11px;
+    letter-spacing:2.5px;color:var(--faint);text-transform:uppercase}
+  h1{font-size:56px;font-weight:800;letter-spacing:-1.5px;margin:14px 0 18px}
+  .tagline{font-size:21px;color:var(--txt);max-width:640px;margin:0 auto 14px}
+  .sub{color:var(--dim);font-size:15px;max-width:560px;margin:0 auto 30px}
+  .btn{display:inline-block;background:var(--accent);color:#0A1524;font-weight:600;
+    font-size:15px;padding:12px 26px;border-radius:10px}
+  .btn:hover{text-decoration:none;filter:brightness(1.1)}
+  .ver{color:var(--faint);font-size:12px;margin-top:14px;font-family:ui-monospace,Menlo,monospace}
+
+  .shots{display:flex;gap:36px;justify-content:center;align-items:flex-start;padding:36px 0 8px;flex-wrap:wrap}
+  .shots img{width:320px;border-radius:14px;border:1px solid var(--line);
+    box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  .caption{color:var(--dim);font-size:14px;text-align:center;padding:22px 0 8px}
+
+  section{padding:52px 0}
+  h2{font-size:28px;font-weight:700;letter-spacing:-.5px;margin-bottom:8px}
+  .lead{color:var(--dim);font-size:15px;margin-bottom:30px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 24px}
+  .card h3{font-size:16px;font-weight:600;margin-bottom:8px}
+  .card p{color:var(--dim);font-size:14px}
+  .note{margin-top:10px;font-size:12.5px;color:#E5B567}
+  .note::before{content:"⚠ ";font-size:12px}
+
+  .audio{display:flex;gap:44px;align-items:center;flex-wrap:wrap}
+  .audio .txt{flex:1;min-width:260px}
+  .audio img{width:320px;border-radius:14px;border:1px solid var(--line);
+    box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  .audio p{color:var(--dim);font-size:15px;margin-top:10px}
+
+  .tags{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
+  .tag{font-size:12px;color:var(--dim);border:1px solid var(--line);
+    border-radius:6px;padding:4px 10px;background:var(--card);white-space:nowrap}
+
+  footer{border-top:1px solid var(--line);margin-top:40px;padding:28px 0 44px;
+    color:var(--faint);font-size:13px;text-align:center}
+  footer a{color:var(--dim)}
+  @media (max-width:700px){h1{font-size:42px}.shots{gap:24px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">Mini<span>Bar</span></div>
+    <a href="#" id="langLink">中文</a>
+  </header>
+
+  <div class="hero">
+    <div class="eyebrow" data-en="Menu bar utility for macOS" data-zh="macOS 菜单栏工具">Menu bar utility for macOS</div>
+    <h1>MiniBar</h1>
+    <p class="tagline" data-en="Brightness, volume, power and storage — one native panel in your menu bar."
+       data-zh="亮度、音量、电源、存储——菜单栏里的一个原生面板。">Brightness, volume, power and storage — one native panel in your menu bar.</p>
+    <p class="sub" data-en="Built with SwiftUI and AppKit. No Electron, no background bloat."
+       data-zh="由 SwiftUI 与 AppKit 打造。没有 Electron，没有臃肿的后台。">Built with SwiftUI and AppKit. No Electron, no background bloat.</p>
+    <a class="btn" href="https://github.com/Samuelonly/MiniBar" data-en="View on GitHub" data-zh="在 GitHub 查看">View on GitHub</a>
+    <div class="ver">v0.1.2 · macOS</div>
+  </div>
+
+  <div class="shots">
+    <img src="assets/panel-dark.png" alt="MiniBar panel, dark appearance">
+    <img src="assets/panel-light.png" alt="MiniBar panel, light appearance">
+  </div>
+  <p class="caption" data-en="Dark and light. Follows your system until you choose otherwise."
+     data-zh="深色与浅色。默认跟随系统，你点过一次就听你的。">Dark and light. Follows your system until you choose otherwise.</p>
+
+  <section>
+    <h2 data-en="Everything in one panel" data-zh="一个面板，全部搞定">Everything in one panel</h2>
+    <p class="lead" data-en="Click the menu bar icon. That's the whole interface."
+       data-zh="点一下菜单栏图标，这就是全部界面。">Click the menu bar icon. That's the whole interface.</p>
+    <div class="grid">
+      <div class="card">
+        <h3 data-en="Display Control" data-zh="显示控制">Display Control</h3>
+        <p data-en="Brightness and contrast on native sliders, with fine scroll-wheel adjustment and rotation."
+           data-zh="原生滑杆调节亮度与对比度，滚轮微调，支持旋转方向。">Brightness and contrast on native sliders, with fine scroll-wheel adjustment and rotation.</p>
+        <p class="note" data-en="Picture Mode is visible in the panel but not yet implemented."
+           data-zh="画质模式已显示在面板中，但尚未实现。">Picture Mode is visible in the panel but not yet implemented.</p>
+      </div>
+      <div class="card">
+        <h3 data-en="Power" data-zh="电源管理">Power</h3>
+        <p data-en="Display sleep, system sleep and keep-awake — one toggle each, no digging through System Settings."
+           data-zh="屏幕休眠、系统休眠、防休眠，各一个开关，不用再翻系统设置。">Display sleep, system sleep and keep-awake — one toggle each, no digging through System Settings.</p>
+      </div>
+      <div class="card">
+        <h3 data-en="Audio Routing" data-zh="音频路由">Audio Routing</h3>
+        <p data-en="Mute everything, or route speakers and microphones to AirPods and other devices, with a live input level meter."
+           data-zh="一键全局静音，扬声器与麦克风可切换到 AirPods 等设备，输入电平实时可见。">Mute everything, or route speakers and microphones to AirPods and other devices, with a live input level meter.</p>
+      </div>
+      <div class="card">
+        <h3 data-en="Storage" data-zh="存储管理">Storage</h3>
+        <p data-en="Used and total space at a glance. Eject one drive, or safely eject all."
+           data-zh="已用与总容量一目了然。可弹出单个盘，也可安全弹出全部。">Used and total space at a glance. Eject one drive, or safely eject all.</p>
+      </div>
+      <div class="card">
+        <h3 data-en="Modular by Design" data-zh="模块化设计">Modular by Design</h3>
+        <p data-en="Enable what you need. Off means gone from the panel, using no memory."
+           data-zh="用哪个，开哪个。关闭立刻从面板里消失，不占内存。">Enable what you need. Off means gone from the panel, using no memory.</p>
+      </div>
+      <div class="card">
+        <h3 data-en="Two Languages" data-zh="双语界面">Two Languages</h3>
+        <p data-en="English and Simplified Chinese. Labels measure themselves, so long translations never collide with sliders."
+           data-zh="英文与简体中文。标签按文字实际宽度布局，再长的翻译也不会和滑杆挤在一起。">English and Simplified Chinese. Labels measure themselves, so long translations never collide with sliders.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="audio">
+    <div class="txt">
+      <h2 data-en="Made for AirPods" data-zh="为 AirPods 而生">Made for AirPods</h2>
+      <p data-en="Pick your output and input in two clicks. The live meter shows your microphone is actually working — no guessing, no test calls."
+         data-zh="两下点击切换输出与输入设备。实时电平表告诉你麦克风真的在工作——不用猜，也不用打测试电话。">Pick your output and input in two clicks. The live meter shows your microphone is actually working — no guessing, no test calls.</p>
+      <p data-en="Devices are enumerated when you open the panel, and the meter only runs while its row is expanded. Close it, and everything stops."
+         data-zh="设备在你打开面板时才枚举，电平表只在子行展开时运行。一收起，全部停止。">Devices are enumerated when you open the panel, and the meter only runs while its row is expanded. Close it, and everything stops.</p>
+    </div>
+    <img src="assets/panel-mic.png" alt="MiniBar audio routing to AirPods Pro with live input level meter">
+  </section>
+
+  <section>
+    <h2 data-en="About MiniBar" data-zh="关于 MiniBar">About MiniBar</h2>
+    <p class="lead" data-en="MiniBar is a personal open-source project by @Samuelonly. It lives in your menu bar and stays out of your way: no Dock icon, no polling while the panel is closed, and modules that fully unload when disabled."
+       data-zh="MiniBar 是 @Samuelonly 的个人开源项目。它住在菜单栏，不打扰你：没有 Dock 图标，面板关闭时不轮询，模块关闭后彻底卸载。">MiniBar is a personal open-source project by @Samuelonly. It lives in your menu bar and stays out of your way: no Dock icon, no polling while the panel is closed, and modules that fully unload when disabled.</p>
+    <div class="tags">
+      <span class="tag" data-en="Volume Control" data-zh="音量控制">Volume Control</span>
+      <span class="tag" data-en="Brightness Control" data-zh="亮度控制">Brightness Control</span>
+      <span class="tag" data-en="Contrast Control" data-zh="对比度控制">Contrast Control</span>
+      <span class="tag" data-en="Mac mini Control" data-zh="Mac mini 控制">Mac mini Control</span>
+      <span class="tag" data-en="Night Shift" data-zh="夜览">Night Shift</span>
+      <span class="tag" data-en="Audio Routing" data-zh="音频路由">Audio Routing</span>
+      <span class="tag">AirPods</span>
+      <span class="tag" data-en="Input Level Meter" data-zh="输入电平表">Input Level Meter</span>
+      <span class="tag" data-en="Display Sleep" data-zh="屏幕休眠">Display Sleep</span>
+      <span class="tag" data-en="Keep Awake" data-zh="防休眠">Keep Awake</span>
+      <span class="tag" data-en="Safe Eject" data-zh="安全弹出">Safe Eject</span>
+      <span class="tag" data-en="Menu Bar App" data-zh="菜单栏应用">Menu Bar App</span>
+      <span class="tag">SwiftUI</span>
+      <span class="tag">AppKit</span>
+      <span class="tag" data-en="No Electron" data-zh="无 Electron">No Electron</span>
+      <span class="tag" data-en="Open Source" data-zh="开源">Open Source</span>
+    </div>
+  </section>
+
+  <footer>
+    <span data-en="Made by" data-zh="作者">Made by</span>
+    <a href="https://github.com/Samuelonly">@Samuelonly</a> ·
+    <a href="https://github.com/Samuelonly/MiniBar">github.com/Samuelonly/MiniBar</a> · v0.1.2
+  </footer>
+</div>
+
+<script>
+  let lang = "en";
+  const link = document.getElementById("langLink");
+  function render() {
+    document.querySelectorAll("[data-en]").forEach(el => {
+      el.textContent = el.dataset[lang];
+    });
+    document.documentElement.lang = lang === "en" ? "en" : "zh-Hans";
+    link.textContent = lang === "en" ? "中文" : "English";
+    document.title = lang === "en"
+      ? "MiniBar — Menu bar essentials for macOS"
+      : "MiniBar — macOS 菜单栏必备面板";
+  }
+  link.addEventListener("click", e => {
+    e.preventDefault();
+    lang = lang === "en" ? "zh" : "en";
+    render();
+  });
+</script>
+</body>
+</html>

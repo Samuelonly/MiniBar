@@ -1,0 +1,55 @@
+/* MiniBar · Español */
+
+"settings.title" = "MINIBAR · Ajustes";
+"settings.note.effective" = "Activa lo que necesites.";
+"settings.note.noResident" = "Desactivado = desaparece del panel, sin usar memoria.";
+"settings.section.modules" = "Módulos";
+
+"module.display.title" = "Pantalla";
+"module.display.subtitle" = "Brillo · Contraste · Rotación";
+"module.state.title" = "Apariencia";
+"module.state.subtitle" = "Modo oscuro · Night Shift";
+"menu.nightshift" = "Night Shift";
+"module.power.title" = "Energía";
+"module.power.subtitle" = "Reposo de pantalla · Reposo del sistema · Mantener despierto";
+"module.audio.title" = "Audio";
+"module.audio.subtitle" = "Silenciar · Cambio de salida/micrófono";
+"module.storage.title" = "Almacenamiento";
+"module.storage.subtitle" = "Expulsión segura por disco · Remontar";
+
+"settings.version.check" = "Buscar actualizaciones";
+"settings.version.latest" = "Actualizado v%@";
+"settings.version.available" = "Nueva versión %@ ↗";
+"settings.version.none" = "Aún no hay releases";
+"settings.version.retry" = "Sin conexión, toca para reintentar";
+"settings.version.checking" = "Comprobando…";
+
+"menu.section.display" = "PANTALLA";
+"menu.display.brightness" = "Brillo";
+"menu.display.contrast" = "Contraste";
+"menu.display.rotation" = "Rotación";
+"menu.rotation.landscape" = "Horizontal";
+"menu.rotation.portrait" = "Vertical";
+"menu.section.appearance" = "APARIENCIA";
+"menu.section.power" = "ENERGÍA";
+"menu.power.screenSleep" = "Reposo de pantalla";
+"menu.power.systemSleep" = "Reposo del sistema";
+"menu.power.keepAwake" = "Mantener despierto";
+"menu.section.audio" = "AUDIO";
+"menu.audio.mute" = "Silenciar todo";
+"menu.audio.speakers" = "Altavoces";
+"menu.audio.microphones" = "Micrófonos";
+"menu.section.storage" = "ALMACENAMIENTO";
+"menu.storage.ejectAll" = "Expulsar todo de forma segura";
+"menu.storage.ejectAllConfirm" = "¿Expulsar todo — confirmar?";
+"menu.storage.empty" = "Sin discos externos";
+"menu.hint.blockedByKeepAwake" = "⚠ Desactiva primero Mantener despierto";
+"menu.settings" = "Ajustes";
+"menu.quit" = "Salir de MiniBar";
+"menu.footer.note" = "Cada módulo puede cargarse o desactivarse en cualquier momento";
+"menu.mic.inputLevel" = "Nivel de entrada";
+"menu.appearance.dark" = "Oscuro";
+"menu.appearance.light" = "Claro";
+
+"menu.display.pictureMode" = "Modo de imagen";
+"menu.display.modeItem" = "Modo %d";

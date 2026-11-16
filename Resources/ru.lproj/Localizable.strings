@@ -1,0 +1,55 @@
+/* MiniBar · Русский */
+
+"settings.title" = "MINIBAR · Настройки";
+"settings.note.effective" = "Включите только то, что нужно.";
+"settings.note.noResident" = "Выключено — исчезает из панели, память не используется.";
+"settings.section.modules" = "Модули";
+
+"module.display.title" = "Дисплей";
+"module.display.subtitle" = "Яркость · Контраст · Поворот";
+"module.state.title" = "Внешний вид";
+"module.state.subtitle" = "Тёмный режим · Night Shift";
+"menu.nightshift" = "Night Shift";
+"module.power.title" = "Энергия";
+"module.power.subtitle" = "Сон дисплея · Сон системы · Не давать спать";
+"module.audio.title" = "Аудио";
+"module.audio.subtitle" = "Заглушить · Переключение выхода/микрофона";
+"module.storage.title" = "Хранилище";
+"module.storage.subtitle" = "Безопасное извлечение дисков · Повторное подключение";
+
+"settings.version.check" = "Проверить обновления";
+"settings.version.latest" = "Актуально v%@";
+"settings.version.available" = "Новая версия %@ ↗";
+"settings.version.none" = "Пока нет релизов";
+"settings.version.retry" = "Нет сети, коснитесь для повтора";
+"settings.version.checking" = "Проверка…";
+
+"menu.section.display" = "ДИСПЛЕЙ";
+"menu.display.brightness" = "Яркость";
+"menu.display.contrast" = "Контраст";
+"menu.display.rotation" = "Поворот";
+"menu.rotation.landscape" = "Альбомная";
+"menu.rotation.portrait" = "Портретная";
+"menu.section.appearance" = "ВНЕШНИЙ ВИД";
+"menu.section.power" = "ЭНЕРГИЯ";
+"menu.power.screenSleep" = "Сон дисплея";
+"menu.power.systemSleep" = "Сон системы";
+"menu.power.keepAwake" = "Не давать спать";
+"menu.section.audio" = "АУДИО";
+"menu.audio.mute" = "Заглушить всё";
+"menu.audio.speakers" = "Динамики";
+"menu.audio.microphones" = "Микрофоны";
+"menu.section.storage" = "ХРАНИЛИЩЕ";
+"menu.storage.ejectAll" = "Безопасно извлечь все";
+"menu.storage.ejectAllConfirm" = "Извлечь все — подтвердить?";
+"menu.storage.empty" = "Нет внешних дисков";
+"menu.hint.blockedByKeepAwake" = "⚠ Сначала выключите Не давать спать";
+"menu.settings" = "Настройки";
+"menu.quit" = "Выйти из MiniBar";
+"menu.footer.note" = "Каждый модуль можно загрузить или отключить в любой момент";
+"menu.mic.inputLevel" = "Уровень входа";
+"menu.appearance.dark" = "Тёмный";
+"menu.appearance.light" = "Светлый";
+
+"menu.display.pictureMode" = "Режим изображения";
+"menu.display.modeItem" = "Режим %d";

@@ -1,0 +1,55 @@
+/* MiniBar · 繁體中文 */
+
+"settings.title" = "MINIBAR · 設定";
+"settings.note.effective" = "要哪個，開哪個。";
+"settings.note.noResident" = "關閉立刻從面板裡消失，不佔記憶體。";
+"settings.section.modules" = "模組";
+
+"module.display.title" = "顯示控制";
+"module.display.subtitle" = "亮度 · 對比度 · 旋轉";
+"module.state.title" = "外觀";
+"module.state.subtitle" = "深色 · 夜覽";
+"menu.nightshift" = "夜覽";
+"module.power.title" = "電源管理";
+"module.power.subtitle" = "螢幕休眠 · 系統休眠 · 防休眠";
+"module.audio.title" = "音訊路由";
+"module.audio.subtitle" = "全域靜音 · 揚聲器/麥克風切換";
+"module.storage.title" = "儲存管理";
+"module.storage.subtitle" = "逐碟安全彈出 · 重新掛載";
+
+"settings.version.check" = "檢查更新";
+"settings.version.latest" = "已是最新 v%@";
+"settings.version.available" = "發現新版本 %@ ↗";
+"settings.version.none" = "暫無 Release";
+"settings.version.retry" = "網路不可達，重試";
+"settings.version.checking" = "檢查中…";
+
+"menu.section.display" = "顯示";
+"menu.display.brightness" = "亮度";
+"menu.display.contrast" = "對比度";
+"menu.display.rotation" = "旋轉方向";
+"menu.rotation.landscape" = "橫向";
+"menu.rotation.portrait" = "縱向";
+"menu.section.appearance" = "外觀";
+"menu.section.power" = "電源";
+"menu.power.screenSleep" = "螢幕休眠";
+"menu.power.systemSleep" = "系統休眠";
+"menu.power.keepAwake" = "防休眠";
+"menu.section.audio" = "音訊";
+"menu.audio.mute" = "全域靜音";
+"menu.audio.speakers" = "揚聲器";
+"menu.audio.microphones" = "麥克風";
+"menu.section.storage" = "儲存";
+"menu.storage.ejectAll" = "安全彈出全部";
+"menu.storage.ejectAllConfirm" = "確認彈出全部？";
+"menu.storage.empty" = "沒有外接硬碟";
+"menu.hint.blockedByKeepAwake" = "⚠ 請先關閉防休眠";
+"menu.settings" = "設定";
+"menu.quit" = "結束 MiniBar";
+"menu.footer.note" = "所有模組可隨時載入或關閉";
+"menu.mic.inputLevel" = "輸入電平";
+"menu.appearance.dark" = "深色";
+"menu.appearance.light" = "淺色";
+
+"menu.display.pictureMode" = "畫質模式";
+"menu.display.modeItem" = "模式 %d";

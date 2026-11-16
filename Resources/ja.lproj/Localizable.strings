@@ -1,0 +1,55 @@
+/* MiniBar · 日本語 */
+
+"settings.title" = "MINIBAR · 設定";
+"settings.note.effective" = "必要なものだけ有効に。";
+"settings.note.noResident" = "オフにするとパネルから消え、メモリも解放されます。";
+"settings.section.modules" = "モジュール";
+
+"module.display.title" = "ディスプレイ";
+"module.display.subtitle" = "明るさ · コントラスト · 回転";
+"module.state.title" = "外観";
+"module.state.subtitle" = "ダークモード · Night Shift";
+"menu.nightshift" = "Night Shift";
+"module.power.title" = "電源";
+"module.power.subtitle" = "ディスプレイスリープ · システムスリープ · スリープ防止";
+"module.audio.title" = "オーディオ";
+"module.audio.subtitle" = "ミュート · 出力/マイク切り替え";
+"module.storage.title" = "ストレージ";
+"module.storage.subtitle" = "各ディスクの安全な取り出し · リマウント";
+
+"settings.version.check" = "アップデートを確認";
+"settings.version.latest" = "最新です v%@";
+"settings.version.available" = "新しいバージョン %@ ↗";
+"settings.version.none" = "リリースはまだありません";
+"settings.version.retry" = "オフラインです、タップして再試行";
+"settings.version.checking" = "確認中…";
+
+"menu.section.display" = "ディスプレイ";
+"menu.display.brightness" = "明るさ";
+"menu.display.contrast" = "コントラスト";
+"menu.display.rotation" = "回転";
+"menu.rotation.landscape" = "横";
+"menu.rotation.portrait" = "縦";
+"menu.section.appearance" = "外観";
+"menu.section.power" = "電源";
+"menu.power.screenSleep" = "ディスプレイスリープ";
+"menu.power.systemSleep" = "システムスリープ";
+"menu.power.keepAwake" = "スリープ防止";
+"menu.section.audio" = "オーディオ";
+"menu.audio.mute" = "すべてミュート";
+"menu.audio.speakers" = "スピーカー";
+"menu.audio.microphones" = "マイク";
+"menu.section.storage" = "ストレージ";
+"menu.storage.ejectAll" = "すべて安全に取り出し";
+"menu.storage.ejectAllConfirm" = "すべて取り出します — 確認？";
+"menu.storage.empty" = "外付けドライブなし";
+"menu.hint.blockedByKeepAwake" = "⚠ 先にスリープ防止をオフにしてください";
+"menu.settings" = "設定";
+"menu.quit" = "MiniBar を終了";
+"menu.footer.note" = "すべてのモジュールはいつでも読み込みまたは無効化できます";
+"menu.mic.inputLevel" = "入力レベル";
+"menu.appearance.dark" = "ダーク";
+"menu.appearance.light" = "ライト";
+
+"menu.display.pictureMode" = "ピクチャーモード";
+"menu.display.modeItem" = "モード %d";

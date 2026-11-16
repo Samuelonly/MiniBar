@@ -1,14 +1,15 @@
 /* MiniBar · 简体中文 */
 
 "settings.title" = "MINIBAR · 设置";
-"settings.note.effective" = "开关打开立即生效，关闭立即停止工作。";
-"settings.note.noResident" = "关闭的模块不驻留内存，零后台活动。";
+"settings.note.effective" = "用哪个，开哪个。";
+"settings.note.noResident" = "关闭立刻从面板里消失，不占内存。";
 "settings.section.modules" = "模块";
 
 "module.display.title" = "显示控制";
 "module.display.subtitle" = "亮度 · 对比度 · 旋转";
 "module.state.title" = "外观";
 "module.state.subtitle" = "深色 · 夜览";
+"menu.nightshift" = "夜览";
 "module.power.title" = "电源管理";
 "module.power.subtitle" = "屏幕休眠 · 系统休眠 · 防休眠";
 "module.audio.title" = "音频路由";
@@ -45,6 +46,10 @@
 "menu.hint.blockedByKeepAwake" = "⚠ 请先关闭防休眠";
 "menu.settings" = "设置";
 "menu.quit" = "退出 MiniBar";
+"menu.footer.note" = "所有模块可随时加载或关闭";
+"menu.mic.inputLevel" = "输入电平";
+"menu.appearance.dark" = "深色";
+"menu.appearance.light" = "白天";
 
 "menu.display.pictureMode" = "画质模式";
 "menu.display.modeItem" = "模式 %d";

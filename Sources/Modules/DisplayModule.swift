@@ -159,10 +159,11 @@ final class DisplayModule: NSObject, MiniBarModule {
         }
         let menu = NSMenu()
         menu.autoenablesItems = false
-        menu.addItem(menuItem(L("menu.rotation.landscape"), symbol: "arrow.left.arrow.right",
+        // HTML .child-row（旋转浮层）：只有文字 + 开关，无图标、无 tag
+        menu.addItem(menuItem(L("menu.rotation.landscape"), symbol: "",
                               action: #selector(rotationChanged(_:)), target: self,
                               state: currentRotation == 0 ? .on : .off))
-        menu.addItem(menuItem(L("menu.rotation.portrait"), symbol: "arrow.up.arrow.down",
+        menu.addItem(menuItem(L("menu.rotation.portrait"), symbol: "",
                               action: #selector(rotationChanged(_:)), target: self,
                               state: currentRotation != 0 ? .on : .off))
         return menu
@@ -180,8 +181,9 @@ final class DisplayModule: NSObject, MiniBarModule {
         for screen in NSScreen.screens {
             guard let displayID = displayID(screen) else { continue }
 
+            // HTML .screen-label：纯文本 <b> 白色 500，无图标，行高 22
             let nameRow = NSMenuItem(title: screen.localizedName, action: nil, keyEquivalent: "")
-            nameRow.image = NSImage(systemSymbolName: "display", accessibilityDescription: nil)
+            nameRow.identifier = NSUserInterfaceItemIdentifier("minibar.screenLabel")
             items.append(nameRow)
 
             let brightness = NSSlider(

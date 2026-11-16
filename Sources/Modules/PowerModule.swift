@@ -15,10 +15,18 @@ final class PowerModule: NSObject, MiniBarModule {
         let center = NotificationCenter.default
         sleepObservers.append(center.addObserver(
             forName: NSWorkspace.screensDidSleepNotification, object: nil, queue: .main
-        ) { [weak self] _ in self?.screenAsleep = true })
+        ) { [weak self] _ in
+            self?.screenAsleep = true
+            // 通知 HUD 面板重建 model → 开关自动变成蓝色 on
+            center.post(name: ModuleEvent.menuRefresh, object: nil)
+        })
         sleepObservers.append(center.addObserver(
             forName: NSWorkspace.screensDidWakeNotification, object: nil, queue: .main
-        ) { [weak self] _ in self?.screenAsleep = false })
+        ) { [weak self] _ in
+            self?.screenAsleep = false
+            // 屏幕被用户唤醒了 → 开关自动归位
+            center.post(name: ModuleEvent.menuRefresh, object: nil)
+        })
     }
 
     func deactivate() {
@@ -29,16 +37,26 @@ final class PowerModule: NSObject, MiniBarModule {
     }
 
     /// 屏幕休眠开关：开=关闭屏幕；用户唤醒屏幕后开关自动归位（screensDidWake 同步）
-    /// 关=唤醒（caffeinate -u 模拟一次用户活动，零权限）
+    /// 关键：先 dismiss HUD 面板再 displaysleepnow，否则面板重绘会把显示器立刻唤醒
+    /// （实测：displaysleepnow 刚睡 0.1s，HUD 的 menuRefresh 触发 window update → 显示器又醒了）
     @objc func toggleScreenSleep(_ sender: NSMenuItem) {
         if screenAsleep {
             runDetached("/usr/bin/caffeinate", ["-u", "-t", "2"])
             screenAsleep = false
             sender.state = .off
         } else {
-            runDetached("/usr/bin/pmset", ["displaysleepnow"])
-            screenAsleep = true
-            sender.state = .on
+            // 只 dismiss HUD 面板，然后让显示器睡。
+            // 实测（pmset -g log）：statusItem 窗口存在时 displaysleepnow 能稳定保持休眠，
+            // 之前的 NSApp.hide(nil) 会把焦点交给别的 App，那次激活被系统当成用户活动 →
+            // 显示器立刻唤醒（off/on 同一秒），这才是"闪一下"的根因。已移除。
+            NotificationCenter.default.post(name: Notification.Name("minibar.willSleep"), object: nil)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                guard let self else { return }
+                self.screenAsleep = true
+                sender.state = .on
+                // displaysleepnow：让显示器睡，Mac mini 本身不睡
+                runDetached("/usr/bin/pmset", ["displaysleepnow"])
+            }
         }
     }
 

@@ -1,0 +1,55 @@
+/* MiniBar · Français */
+
+"settings.title" = "MINIBAR · Paramètres";
+"settings.note.effective" = "Activez ce dont vous avez besoin.";
+"settings.note.noResident" = "Désactivé = disparaît du panneau, plus aucune mémoire utilisée.";
+"settings.section.modules" = "Modules";
+
+"module.display.title" = "Affichage";
+"module.display.subtitle" = "Luminosité · Contraste · Rotation";
+"module.state.title" = "Apparence";
+"module.state.subtitle" = "Mode sombre · Night Shift";
+"menu.nightshift" = "Night Shift";
+"module.power.title" = "Alimentation";
+"module.power.subtitle" = "Veille écran · Veille système · Empêcher la veille";
+"module.audio.title" = "Audio";
+"module.audio.subtitle" = "Muet · Basculement sortie/microphone";
+"module.storage.title" = "Stockage";
+"module.storage.subtitle" = "Éjection sûre par disque · Remontage";
+
+"settings.version.check" = "Vérifier les mises à jour";
+"settings.version.latest" = "Vous êtes à jour v%@";
+"settings.version.available" = "Nouvelle version %@ ↗";
+"settings.version.none" = "Aucune publication pour le moment";
+"settings.version.retry" = "Hors ligne, appuyer pour réessayer";
+"settings.version.checking" = "Vérification…";
+
+"menu.section.display" = "AFFICHAGE";
+"menu.display.brightness" = "Luminosité";
+"menu.display.contrast" = "Contraste";
+"menu.display.rotation" = "Rotation";
+"menu.rotation.landscape" = "Paysage";
+"menu.rotation.portrait" = "Portrait";
+"menu.section.appearance" = "APPRENCE";
+"menu.section.power" = "ALIMENTATION";
+"menu.power.screenSleep" = "Veille écran";
+"menu.power.systemSleep" = "Veille système";
+"menu.power.keepAwake" = "Empêcher la veille";
+"menu.section.audio" = "AUDIO";
+"menu.audio.mute" = "Tout muet";
+"menu.audio.speakers" = "Haut-parleurs";
+"menu.audio.microphones" = "Microphones";
+"menu.section.storage" = "STOCKAGE";
+"menu.storage.ejectAll" = "Tout éjecter sûrement";
+"menu.storage.ejectAllConfirm" = "Tout éjecter — confirmer ?";
+"menu.storage.empty" = "Aucun disque externe";
+"menu.hint.blockedByKeepAwake" = "⚠ Désactivez d'abord Empêcher la veille";
+"menu.settings" = "Paramètres";
+"menu.quit" = "Quitter MiniBar";
+"menu.footer.note" = "Chaque module peut être chargé ou désactivé à tout moment";
+"menu.mic.inputLevel" = "Niveau d'entrée";
+"menu.appearance.dark" = "Sombre";
+"menu.appearance.light" = "Clair";
+
+"menu.display.pictureMode" = "Mode image";
+"menu.display.modeItem" = "Mode %d";
