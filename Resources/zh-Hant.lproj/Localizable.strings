@@ -53,3 +53,35 @@
 
 "menu.display.pictureMode" = "畫質模式";
 "menu.display.modeItem" = "模式 %d";
+
+// MARK: - 场景（Scene）
+"menu.section.scenes" = "場景";
+"menu.scene.dirty" = "已修改";
+"menu.scene.update" = "用目前值更新「%@」";
+"menu.scene.saveNew" = "存為新場景…";
+"menu.scene.restore" = "恢復內建場景";
+"scene.daily" = "日常";
+"scene.cinema" = "影像";
+"scene.text" = "文稿";
+"scene.night" = "夜讀";
+"scene.darkroom" = "暗房";
+"scene.copySuffix" = " 副本";
+"scene.menu.rename" = "重新命名";
+"scene.menu.duplicate" = "複製為新場景";
+"scene.menu.delete" = "刪除";
+"scene.new.title" = "新增場景";
+"scene.new.message" = "將目前亮度與對比度存成具名場景。";
+"scene.new.placeholder" = "場景名稱";
+"scene.rename.title" = "重新命名場景";
+"scene.restore.title" = "恢復內建場景？";
+"scene.restore.message" = "只重設 5 個內建場景，你自建的場景不受影響。";
+"scene.restore.action" = "恢復";
+"common.ok" = "確定";
+"common.cancel" = "取消";
+
+"scene.switch.title" = "放棄對「%@」的修改？";
+"scene.switch.message" = "你剛才對目前場景的調整還沒儲存，選擇怎麼處理。";
+"scene.switch.save" = "儲存並切換";
+"scene.switch.discard" = "捨棄並切換";
+
+"scene.apply.failed" = "無法套用這個場景，請檢查顯示器連線。";

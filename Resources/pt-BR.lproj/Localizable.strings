@@ -53,3 +53,35 @@
 
 "menu.display.pictureMode" = "Modo de imagem";
 "menu.display.modeItem" = "Modo %d";
+
+// MARK: - 场景（Scene）
+"menu.section.scenes" = "CENAS";
+"menu.scene.dirty" = "Modificado";
+"menu.scene.update" = "Atualizar “%@” com os valores atuais";
+"menu.scene.saveNew" = "Salvar como nova cena…";
+"menu.scene.restore" = "Restaurar cenas integradas";
+"scene.daily" = "Diário";
+"scene.cinema" = "Cinema";
+"scene.text" = "Texto";
+"scene.night" = "Noite";
+"scene.darkroom" = "Sala escura";
+"scene.copySuffix" = " (cópia)";
+"scene.menu.rename" = "Renomear";
+"scene.menu.duplicate" = "Duplicar";
+"scene.menu.delete" = "Excluir";
+"scene.new.title" = "Nova cena";
+"scene.new.message" = "Salva o brilho e o contraste atuais como uma cena nomeada.";
+"scene.new.placeholder" = "Nome da cena";
+"scene.rename.title" = "Renomear cena";
+"scene.restore.title" = "Restaurar as cenas integradas?";
+"scene.restore.message" = "Apenas as 5 cenas integradas são redefinidas. Suas cenas permanecem intactas.";
+"scene.restore.action" = "Restaurar";
+"common.ok" = "OK";
+"common.cancel" = "Cancelar";
+
+"scene.switch.title" = "Descartar as alterações de “%@”?";
+"scene.switch.message" = "Os ajustes da cena ativa não foram salvos.";
+"scene.switch.save" = "Salvar e mudar";
+"scene.switch.discard" = "Descartar e mudar";
+
+"scene.apply.failed" = "Não foi possível aplicar esta cena. Verifique a conexão do monitor.";

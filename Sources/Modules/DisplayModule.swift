@@ -14,6 +14,9 @@ final class DisplayModule: NSObject, MiniBarModule {
     private var ddcEndpoints: [DDCTransport.Endpoint] = []
 
     func activate() {
+        // 提前初始化场景仓库：注册 ⌃⌥1–5 全局热键、写入默认场景。
+        // 不能等到第一次开面板才初始化，否则冷启动时热键是死的。
+        _ = SceneStore.shared
         refreshPictureMode()
     }
 
@@ -30,43 +33,21 @@ final class DisplayModule: NSObject, MiniBarModule {
     }
 
     private func displayID(_ screen: NSScreen) -> CGDirectDisplayID? {
-        screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID
+        DisplayPort.displayID(of: screen)
     }
 
     private func ddcEndpoint(for screen: NSScreen) -> DDCTransport.Endpoint? {
         guard let displayID = displayID(screen) else { return nil }
-        let identity = DDCTransport.Identity(vendor: CGDisplayVendorNumber(displayID),
-                                             product: CGDisplayModelNumber(displayID),
-                                             serial: CGDisplaySerialNumber(displayID))
-        return ddcEndpoints.first { $0.identity == identity }
+        return DisplayPort.endpoint(for: displayID)
     }
 
     private func screen(for displayID: CGDirectDisplayID) -> NSScreen? {
-        NSScreen.screens.first {
-            $0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID == displayID
-        }
+        DisplayPort.screen(for: displayID)
     }
 
-    /// 通过 vendor/product 匹配 IODisplayConnect 服务（内置屏亮度用）
+    /// 内置屏亮度服务（走显示端口层）
     private func ioDisplayService(for displayID: CGDirectDisplayID) -> io_service_t? {
-        var iterator: io_iterator_t = 0
-        guard IOServiceGetMatchingServices(kIOMainPortDefault,
-                                           IOServiceMatching("IODisplayConnect"),
-                                           &iterator) == KERN_SUCCESS else { return nil }
-        defer { IOObjectRelease(iterator) }
-        let tag = "DisplayVendorID-\(CGDisplayVendorNumber(displayID))-DisplayProductID-\(CGDisplayModelNumber(displayID))"
-        while true {
-            let service = IOIteratorNext(iterator)
-            if service == 0 { break }
-            if let info = IODisplayCreateInfoDictionary(service, IOOptionBits(0))
-                .takeRetainedValue() as? [String: Any],
-               let location = info[kIODisplayLocationKey] as? String,
-               location.contains(tag) {
-                return service // 调用方负责 IOObjectRelease
-            }
-            IOObjectRelease(service)
-        }
-        return nil
+        DisplayPort.ioService(for: displayID)
     }
 
     // MARK: - 亮度/对比度（按屏）
@@ -88,6 +69,8 @@ final class DisplayModule: NSObject, MiniBarModule {
                                        Float32(percent))
             IOObjectRelease(service)
         }
+        // 不重建菜单，只让场景区块重算 dirty 状态
+        NotificationCenter.default.post(name: .minibarDisplayValueChanged, object: nil)
     }
 
     /// 对比度滑杆变化：仅外接屏（DDC VCP 0x12），内置屏无软件对比度
@@ -99,6 +82,7 @@ final class DisplayModule: NSObject, MiniBarModule {
         let percent = sender.doubleValue / 100
         _ = ddc?.write(endpoint, command: .contrast, percent: percent)
         UserDefaults.standard.set(sender.doubleValue, forKey: contrastCacheKey(displayID))
+        NotificationCenter.default.post(name: .minibarDisplayValueChanged, object: nil)
     }
 
     // MARK: - 画质模式（VCP 0x14，随鼠标所在屏路由）
@@ -213,6 +197,12 @@ final class DisplayModule: NSObject, MiniBarModule {
                               submenu: rotationMenu()))
         items.append(menuItem(L("menu.display.pictureMode"), symbol: "paintpalette",
                               submenu: pictureModeMenu()))
+
+        // 场景：唯一编辑器仍是上面两条滑杆，这里只多 N 行文字
+        items.append(sectionHeader(L("menu.section.scenes")))
+        let sceneBlock = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        sceneBlock.identifier = NSUserInterfaceItemIdentifier("minibar.sceneBlock")
+        items.append(sceneBlock)
         return items
     }
 }

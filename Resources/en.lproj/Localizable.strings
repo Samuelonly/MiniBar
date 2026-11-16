@@ -53,3 +53,35 @@
 
 "menu.display.pictureMode" = "Picture Mode";
 "menu.display.modeItem" = "Mode %d";
+
+// MARK: - 场景（Scene）
+"menu.section.scenes" = "SCENES";
+"menu.scene.dirty" = "Edited";
+"menu.scene.update" = "Update “%@” with current values";
+"menu.scene.saveNew" = "Save as new scene…";
+"menu.scene.restore" = "Restore built-in scenes";
+"scene.daily" = "Daily";
+"scene.cinema" = "Cinema";
+"scene.text" = "Text";
+"scene.night" = "Night";
+"scene.darkroom" = "Darkroom";
+"scene.copySuffix" = " copy";
+"scene.menu.rename" = "Rename";
+"scene.menu.duplicate" = "Duplicate";
+"scene.menu.delete" = "Delete";
+"scene.new.title" = "New scene";
+"scene.new.message" = "Saves the current brightness and contrast as a named scene.";
+"scene.new.placeholder" = "Scene name";
+"scene.rename.title" = "Rename scene";
+"scene.restore.title" = "Restore built-in scenes?";
+"scene.restore.message" = "Only the 5 built-in scenes are reset. Your own scenes stay untouched.";
+"scene.restore.action" = "Restore";
+"common.ok" = "OK";
+"common.cancel" = "Cancel";
+
+"scene.switch.title" = "Discard changes to “%@”?";
+"scene.switch.message" = "Choose what to do with the edits you made to the active scene.";
+"scene.switch.save" = "Save and switch";
+"scene.switch.discard" = "Discard and switch";
+
+"scene.apply.failed" = "Couldn’t apply this scene. Check the display connection.";

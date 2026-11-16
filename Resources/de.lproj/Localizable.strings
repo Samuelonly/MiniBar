@@ -53,3 +53,35 @@
 
 "menu.display.pictureMode" = "Bildmodus";
 "menu.display.modeItem" = "Modus %d";
+
+// MARK: - 场景（Scene）
+"menu.section.scenes" = "SZENEN";
+"menu.scene.dirty" = "Geändert";
+"menu.scene.update" = "„%@“ mit aktuellen Werten aktualisieren";
+"menu.scene.saveNew" = "Als neue Szene sichern…";
+"menu.scene.restore" = "Integrierte Szenen zurücksetzen";
+"scene.daily" = "Standard";
+"scene.cinema" = "Kino";
+"scene.text" = "Text";
+"scene.night" = "Nacht";
+"scene.darkroom" = "Dunkelkammer";
+"scene.copySuffix" = " (Kopie)";
+"scene.menu.rename" = "Umbenennen";
+"scene.menu.duplicate" = "Duplizieren";
+"scene.menu.delete" = "Löschen";
+"scene.new.title" = "Neue Szene";
+"scene.new.message" = "Speichert Helligkeit und Kontrast als benannte Szene.";
+"scene.new.placeholder" = "Szenenname";
+"scene.rename.title" = "Szene umbenennen";
+"scene.restore.title" = "Integrierte Szenen zurücksetzen?";
+"scene.restore.message" = "Nur die 5 integrierten Szenen werden zurückgesetzt. Eigene Szenen bleiben erhalten.";
+"scene.restore.action" = "Zurücksetzen";
+"common.ok" = "OK";
+"common.cancel" = "Abbrechen";
+
+"scene.switch.title" = "Änderungen an „%@“ verwerfen?";
+"scene.switch.message" = "Deine Anpassungen an der aktiven Szene sind nicht gespeichert.";
+"scene.switch.save" = "Speichern und wechseln";
+"scene.switch.discard" = "Verwerfen und wechseln";
+
+"scene.apply.failed" = "Szene konnte nicht angewendet werden. Prüfe die Displayverbindung.";

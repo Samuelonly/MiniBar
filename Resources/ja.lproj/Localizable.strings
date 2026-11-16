@@ -53,3 +53,35 @@
 
 "menu.display.pictureMode" = "ピクチャーモード";
 "menu.display.modeItem" = "モード %d";
+
+// MARK: - 场景（Scene）
+"menu.section.scenes" = "シーン";
+"menu.scene.dirty" = "変更あり";
+"menu.scene.update" = "「%@」を現在値で更新";
+"menu.scene.saveNew" = "新しいシーンとして保存…";
+"menu.scene.restore" = "内蔵シーンを復元";
+"scene.daily" = "標準";
+"scene.cinema" = "シネマ";
+"scene.text" = "テキスト";
+"scene.night" = "夜間";
+"scene.darkroom" = "暗室";
+"scene.copySuffix" = " のコピー";
+"scene.menu.rename" = "名前を変更";
+"scene.menu.duplicate" = "複製";
+"scene.menu.delete" = "削除";
+"scene.new.title" = "新規シーン";
+"scene.new.message" = "現在の明るさとコントラストを名前付きシーンとして保存します。";
+"scene.new.placeholder" = "シーン名";
+"scene.rename.title" = "シーンの名前を変更";
+"scene.restore.title" = "内蔵シーンを復元しますか？";
+"scene.restore.message" = "5 つの内蔵シーンのみリセットされます。自作のシーンは変更されません。";
+"scene.restore.action" = "復元";
+"common.ok" = "OK";
+"common.cancel" = "キャンセル";
+
+"scene.switch.title" = "「%@」の変更を破棄しますか？";
+"scene.switch.message" = "現在のシーンへの変更が未保存です。どうするか選択してください。";
+"scene.switch.save" = "保存して切り替え";
+"scene.switch.discard" = "破棄して切り替え";
+
+"scene.apply.failed" = "このシーンを適用できませんでした。ディスプレイの接続を確認してください。";

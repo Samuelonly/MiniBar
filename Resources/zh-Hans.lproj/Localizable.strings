@@ -53,3 +53,35 @@
 
 "menu.display.pictureMode" = "画质模式";
 "menu.display.modeItem" = "模式 %d";
+
+// MARK: - 场景（Scene）
+"menu.section.scenes" = "场景";
+"menu.scene.dirty" = "已修改";
+"menu.scene.update" = "用当前值更新「%@」";
+"menu.scene.saveNew" = "存为新场景…";
+"menu.scene.restore" = "恢复内置场景";
+"scene.daily" = "日常";
+"scene.cinema" = "影像";
+"scene.text" = "文稿";
+"scene.night" = "夜读";
+"scene.darkroom" = "暗房";
+"scene.copySuffix" = " 副本";
+"scene.menu.rename" = "重命名";
+"scene.menu.duplicate" = "复制为新场景";
+"scene.menu.delete" = "删除";
+"scene.new.title" = "新建场景";
+"scene.new.message" = "把当前亮度和对比度存成一个命名场景。";
+"scene.new.placeholder" = "场景名称";
+"scene.rename.title" = "重命名场景";
+"scene.restore.title" = "恢复内置场景？";
+"scene.restore.message" = "只复位 5 个内置场景，你自己建的场景不受影响。";
+"scene.restore.action" = "恢复";
+"common.ok" = "确定";
+"common.cancel" = "取消";
+
+"scene.switch.title" = "放弃对「%@」的修改？";
+"scene.switch.message" = "你刚才对当前场景的调整还没保存，选择怎么处理。";
+"scene.switch.save" = "保存并切换";
+"scene.switch.discard" = "丢弃并切换";
+
+"scene.apply.failed" = "无法应用这个场景，请检查显示器连接。";

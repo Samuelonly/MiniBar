@@ -53,3 +53,35 @@
 
 "menu.display.pictureMode" = "Mode image";
 "menu.display.modeItem" = "Mode %d";
+
+// MARK: - 场景（Scene）
+"menu.section.scenes" = "SCÈNES";
+"menu.scene.dirty" = "Modifié";
+"menu.scene.update" = "Mettre à jour « %@ » avec les valeurs actuelles";
+"menu.scene.saveNew" = "Enregistrer comme nouvelle scène…";
+"menu.scene.restore" = "Restaurer les scènes intégrées";
+"scene.daily" = "Quotidien";
+"scene.cinema" = "Cinéma";
+"scene.text" = "Texte";
+"scene.night" = "Nuit";
+"scene.darkroom" = "Chambre noire";
+"scene.copySuffix" = " (copie)";
+"scene.menu.rename" = "Renommer";
+"scene.menu.duplicate" = "Dupliquer";
+"scene.menu.delete" = "Supprimer";
+"scene.new.title" = "Nouvelle scène";
+"scene.new.message" = "Enregistre la luminosité et le contraste actuels comme une scène nommée.";
+"scene.new.placeholder" = "Nom de la scène";
+"scene.rename.title" = "Renommer la scène";
+"scene.restore.title" = "Restaurer les scènes intégrées ?";
+"scene.restore.message" = "Seules les 5 scènes intégrées sont réinitialisées. Vos scènes restent intactes.";
+"scene.restore.action" = "Restaurer";
+"common.ok" = "OK";
+"common.cancel" = "Annuler";
+
+"scene.switch.title" = "Abandonner les modifications de « %@ » ?";
+"scene.switch.message" = "Vos réglages sur la scène active ne sont pas enregistrés.";
+"scene.switch.save" = "Enregistrer et changer";
+"scene.switch.discard" = "Abandonner et changer";
+
+"scene.apply.failed" = "Impossible d’appliquer cette scène. Vérifiez la connexion de l’écran.";

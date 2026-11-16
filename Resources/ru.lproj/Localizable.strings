@@ -53,3 +53,35 @@
 
 "menu.display.pictureMode" = "Режим изображения";
 "menu.display.modeItem" = "Режим %d";
+
+// MARK: - 场景（Scene）
+"menu.section.scenes" = "СЦЕНЫ";
+"menu.scene.dirty" = "Изменено";
+"menu.scene.update" = "Обновить «%@» текущими значениями";
+"menu.scene.saveNew" = "Сохранить как новую сцену…";
+"menu.scene.restore" = "Восстановить встроенные сцены";
+"scene.daily" = "Обычная";
+"scene.cinema" = "Кино";
+"scene.text" = "Текст";
+"scene.night" = "Ночь";
+"scene.darkroom" = "Тёмная комната";
+"scene.copySuffix" = " (копия)";
+"scene.menu.rename" = "Переименовать";
+"scene.menu.duplicate" = "Дублировать";
+"scene.menu.delete" = "Удалить";
+"scene.new.title" = "Новая сцена";
+"scene.new.message" = "Сохраняет текущую яркость и контраст как именованную сцену.";
+"scene.new.placeholder" = "Название сцены";
+"scene.rename.title" = "Переименовать сцену";
+"scene.restore.title" = "Восстановить встроенные сцены?";
+"scene.restore.message" = "Сбрасываются только 5 встроенных сцен. Ваши сцены не затрагиваются.";
+"scene.restore.action" = "Восстановить";
+"common.ok" = "OK";
+"common.cancel" = "Отмена";
+
+"scene.switch.title" = "Отменить изменения «%@»?";
+"scene.switch.message" = "Настройки активной сцены не сохранены.";
+"scene.switch.save" = "Сохранить и переключить";
+"scene.switch.discard" = "Отменить и переключить";
+
+"scene.apply.failed" = "Не удалось применить сцену. Проверьте подключение дисплея.";

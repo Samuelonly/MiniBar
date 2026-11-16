@@ -53,3 +53,35 @@
 
 "menu.display.pictureMode" = "화면 모드";
 "menu.display.modeItem" = "모드 %d";
+
+// MARK: - 场景（Scene）
+"menu.section.scenes" = "장면";
+"menu.scene.dirty" = "수정됨";
+"menu.scene.update" = "현재 값으로 “%@” 업데이트";
+"menu.scene.saveNew" = "새 장면으로 저장…";
+"menu.scene.restore" = "내장 장면 복원";
+"scene.daily" = "일상";
+"scene.cinema" = "영상";
+"scene.text" = "텍스트";
+"scene.night" = "야간";
+"scene.darkroom" = "암실";
+"scene.copySuffix" = " 복사본";
+"scene.menu.rename" = "이름 변경";
+"scene.menu.duplicate" = "복제";
+"scene.menu.delete" = "삭제";
+"scene.new.title" = "새 장면";
+"scene.new.message" = "현재 밝기와 대비를 이름 있는 장면으로 저장합니다.";
+"scene.new.placeholder" = "장면 이름";
+"scene.rename.title" = "장면 이름 변경";
+"scene.restore.title" = "내장 장면을 복원할까요?";
+"scene.restore.message" = "내장 장면 5개만 초기화되며, 직접 만든 장면은 그대로 유지됩니다.";
+"scene.restore.action" = "복원";
+"common.ok" = "확인";
+"common.cancel" = "취소";
+
+"scene.switch.title" = "“%@”의 변경 사항을 버릴까요?";
+"scene.switch.message" = "현재 장면에 대한 수정이 저장되지 않았습니다.어떻게 처리할지 선택하세요.";
+"scene.switch.save" = "저장하고 전환";
+"scene.switch.discard" = "버리고 전환";
+
+"scene.apply.failed" = "이 장면을 적용할 수 없습니다. 디스플레이 연결을 확인하세요.";

@@ -451,6 +451,9 @@ private struct HUDMenuContent: View {
             MicLevelRow()
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .frame(height: HUDMenuPanel.meterRowHeight)
+        case "minibar.sceneBlock":
+            SceneBlockView()
+                .frame(maxWidth: .infinity, alignment: .leading)
         case "minibar.confirmEjectAll":
             ConfirmEjectAllRow(item: item) {
                 send(item)
