@@ -56,7 +56,13 @@
 
 // MARK: - 场景（Scene）
 "menu.section.scenes" = "场景";
-"menu.scene.dirty" = "已修改";
+"menu.scene.dirty" = "已调整";
+"settings.section.scenes" = "场景快捷键";
+"settings.scene.record" = "「%@」的快捷键";
+"settings.scene.recording" = "按下新的快捷键（Esc 取消）。当前：%@";
+"settings.scene.unset" = "未设置";
+"settings.scene.clear" = "清除";
+"settings.scene.conflict" = "这个快捷键已被占用，换一个试试。";
 "menu.scene.update" = "用当前值更新「%@」";
 "menu.scene.saveNew" = "存为新场景…";
 "menu.scene.restore" = "恢复内置场景";

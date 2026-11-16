@@ -56,7 +56,13 @@
 
 // MARK: - 场景（Scene）
 "menu.section.scenes" = "SCENES";
-"menu.scene.dirty" = "Edited";
+"menu.scene.dirty" = "Adjusted";
+"settings.section.scenes" = "SCENE SHORTCUTS";
+"settings.scene.record" = "Shortcut for “%@”";
+"settings.scene.recording" = "Press a new shortcut (Esc to cancel). Current: %@";
+"settings.scene.unset" = "Not set";
+"settings.scene.clear" = "Clear";
+"settings.scene.conflict" = "That shortcut is already taken. Try another one.";
 "menu.scene.update" = "Update “%@” with current values";
 "menu.scene.saveNew" = "Save as new scene…";
 "menu.scene.restore" = "Restore built-in scenes";

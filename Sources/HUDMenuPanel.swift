@@ -134,6 +134,7 @@ final class HUDMenuPanel: NSPanel {
         case "minibar.note": return noteHeight
         case "minibar.chipRow": return chipRowHeight
         case "minibar.micLevel": return meterRowHeight
+        case "minibar.sceneBlock": return SceneBlockView.blockHeight
         default:
             if let view = item.view { return view.frame.height }
             return rowHeight

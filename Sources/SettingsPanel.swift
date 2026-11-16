@@ -89,19 +89,20 @@ final class SettingsPanel: NSPanel {
         globalClickMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
         ) { [weak self] _ in
-            guard let self, self.isVisible,
+            guard let self, self.isVisible, !HotkeyRecorder.isActive,
                   Date().timeIntervalSince(self.shownAt) > 0.2 else { return }
             if !self.frame.contains(NSEvent.mouseLocation) { self.close() }
         }
         // 本地：本 App 内（主面板）的点击
         localClickMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] event in
-            guard let self, self.isVisible,
+            guard let self, self.isVisible, !HotkeyRecorder.isActive,
                   Date().timeIntervalSince(self.shownAt) > 0.2 else { return event }
             if !self.frame.contains(NSEvent.mouseLocation) { self.close() }
             return event
         }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self, self.isVisible, event.keyCode == 53 else { return event }
+            guard let self, self.isVisible, !HotkeyRecorder.isActive,
+                  event.keyCode == 53 else { return event }
             self.close()
             return nil
         }
@@ -196,6 +197,153 @@ private struct ModuleRow: View {
     }
 }
 
+// MARK: - 场景快捷键行
+
+private struct SceneHotkeyRow: View {
+    let scene: Scene
+    let action: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(scene.displayName)
+                .font(.system(size: 12))
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            Button(action: action) {
+                Text(SceneStore.shared.binding(for: scene)?.display ?? L("settings.scene.unset"))
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
+                    .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(.white.opacity(0.10)))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, 1)
+    }
+}
+
+// MARK: - 快捷键录制
+
+/// 设置面板是 borderless 非 key 窗口，收不到键盘事件；录制用一个临时可成为 key 的小窗口 + 模态循环
+final class HotkeyRecorderPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
+}
+
+enum HotkeyRecorder {
+    enum Outcome { case set(HotkeyBinding), clear, cancel }
+
+    /// 录制期间设置面板的「点外部 / Esc 关闭」要先让路
+    private(set) static var isActive = false
+    private static var controller: RecorderController?
+
+    static func present(sceneName: String, current: HotkeyBinding?,
+                        completion: @escaping (Outcome) -> Void) {
+        let controller = RecorderController(sceneName: sceneName, current: current)
+        self.controller = controller
+        isActive = true
+        let outcome = controller.run()
+        isActive = false
+        self.controller = nil
+        if let outcome { completion(outcome) }
+    }
+}
+
+private final class RecorderController: NSObject {
+    private let panel: HotkeyRecorderPanel
+    private var monitor: Any?
+    private var finished = false
+    private var outcome: HotkeyRecorder.Outcome?
+
+    init(sceneName: String, current: HotkeyBinding?) {
+        panel = HotkeyRecorderPanel(contentRect: NSRect(x: 0, y: 0, width: 340, height: 132),
+                                    styleMask: [.titled], backing: .buffered, defer: false)
+        super.init()
+        panel.title = String(format: L("settings.scene.record"), sceneName)
+        panel.isReleasedWhenClosed = false
+        // 设置面板在 statusBar 层级，录制窗必须同层才能浮在它上面
+        panel.level = .statusBar
+        panel.hidesOnDeactivate = false
+
+        let stack = NSStackView(frame: NSRect(x: 0, y: 0, width: 340, height: 132))
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 12
+        stack.edgeInsets = NSEdgeInsets(top: 18, left: 18, bottom: 16, right: 18)
+        stack.autoresizingMask = [.width, .height]
+
+        let hint = NSTextField(wrappingLabelWithString:
+            String(format: L("settings.scene.recording"),
+                   current?.display ?? L("settings.scene.unset")))
+        hint.font = .systemFont(ofSize: 12)
+        hint.textColor = .secondaryLabelColor
+        stack.addArrangedSubview(hint)
+
+        let buttons = NSStackView()
+        buttons.orientation = .horizontal
+        buttons.spacing = 8
+        let clear = NSButton(title: L("settings.scene.clear"), target: self,
+                             action: #selector(clearTapped))
+        let cancel = NSButton(title: L("common.cancel"), target: self,
+                              action: #selector(cancelTapped))
+        clear.bezelStyle = .rounded
+        cancel.bezelStyle = .rounded
+        buttons.addArrangedSubview(clear)
+        buttons.addArrangedSubview(cancel)
+        stack.addArrangedSubview(buttons)
+
+        panel.contentView = stack
+    }
+
+    func run() -> HotkeyRecorder.Outcome? {
+        panel.center()
+        NSApp.activate(ignoringOtherApps: true)
+        panel.makeKeyAndOrderFront(nil)
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self else { return event }
+            return self.handle(event) ? nil : event
+        }
+        // runModal 会把窗口层级压回 modalPanel(8)，排到设置面板(25)后面；进入模态循环后再抬回来
+        DispatchQueue.main.async { [weak panel] in
+            panel?.level = .statusBar
+            panel?.orderFrontRegardless()
+            panel?.makeKey()
+        }
+        // 录制期间让出全局热键，否则按下已注册的组合会被热键直接吞掉
+        SceneStore.shared.suspendHotkeys()
+        NSApp.runModal(for: panel)
+        SceneStore.shared.resumeHotkeys()
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
+        return outcome
+    }
+
+    /// 只接受「修饰键 + 一个普通键」；纯修饰键不会产生 keyDown
+    private func handle(_ event: NSEvent) -> Bool {
+        if event.keyCode == 53 { finish(.cancel); return true }
+        let flags = event.modifierFlags.intersection([.control, .option, .shift, .command])
+        guard !flags.isEmpty else { NSSound.beep(); return true }
+        finish(.set(HotkeyBinding(keyCode: event.keyCode, modifiers: flags.rawValue)))
+        return true
+    }
+
+    private func finish(_ result: HotkeyRecorder.Outcome) {
+        guard !finished else { return }
+        finished = true
+        outcome = result
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
+        NSApp.stopModal()
+        panel.orderOut(nil)
+        panel.close()
+    }
+
+    @objc private func clearTapped() { finish(.clear) }
+    @objc private func cancelTapped() { finish(.cancel) }
+}
+
 // MARK: - 面板内容
 
 struct SettingsContent: View {
@@ -209,6 +357,30 @@ struct SettingsContent: View {
 
     /// PRD §10：仅 0.15s 级微淡入
     @State private var appeared = false
+    /// 场景增删改 / 改键后刷新列表
+    @State private var revision = 0
+
+    private var store: SceneStore { SceneStore.shared }
+
+    /// 打开录制窗口；冲突/占用时提示并回滚
+    private func record(_ scene: Scene) {
+        HotkeyRecorder.present(sceneName: scene.displayName,
+                               current: store.binding(for: scene)) { outcome in
+            switch outcome {
+            case .cancel:
+                break
+            case .clear:
+                store.setBinding(nil, for: scene.id)
+            case .set(let binding):
+                switch store.setBinding(binding, for: scene.id) {
+                case .ok: break
+                case .duplicate, .unavailable:
+                    SceneDialogs.info(L("settings.scene.conflict"))
+                }
+            }
+            revision &+= 1
+        }
+    }
 
     // MARK: - 检查更新（GitHub Releases，零依赖）
 
@@ -341,6 +513,20 @@ struct SettingsContent: View {
                       subtitle: L("module.storage.subtitle"), enabled: $storage)
 
             Divider()
+
+            Text(L("settings.section.scenes"))
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .tracking(1.6)
+                .foregroundStyle(.tertiary)
+
+            VStack(spacing: 4) {
+                let _ = revision
+                ForEach(store.scenes) { scene in
+                    SceneHotkeyRow(scene: scene) { record(scene) }
+                }
+            }
+
+            Divider()
             // 版本行：与底部 GitHub 行同款居中逻辑，`·` 间隔
             HStack(spacing: 6) {
                 Spacer()
@@ -377,6 +563,9 @@ struct SettingsContent: View {
         )
         // 文字、次级文字、分隔线、开关全部由 colorScheme 驱动，两套皮肤真切换
         .environment(\.colorScheme, PanelAppearance.current.colorScheme)
+        .onReceive(NotificationCenter.default.publisher(for: SceneStore.changed)) { _ in
+            revision &+= 1
+        }
         // 不做淡入动画：NSHostingView 在 borderless 窗口里 onAppear 时机不稳定
     }
 }

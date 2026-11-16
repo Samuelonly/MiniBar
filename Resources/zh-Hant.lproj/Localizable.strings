@@ -56,7 +56,13 @@
 
 // MARK: - 场景（Scene）
 "menu.section.scenes" = "場景";
-"menu.scene.dirty" = "已修改";
+"menu.scene.dirty" = "已調整";
+"settings.section.scenes" = "場景快速鍵";
+"settings.scene.record" = "「%@」的快速鍵";
+"settings.scene.recording" = "按下新的快速鍵（Esc 取消）。目前：%@";
+"settings.scene.unset" = "未設定";
+"settings.scene.clear" = "清除";
+"settings.scene.conflict" = "這個快速鍵已被占用，換一個試試。";
 "menu.scene.update" = "用目前值更新「%@」";
 "menu.scene.saveNew" = "存為新場景…";
 "menu.scene.restore" = "恢復內建場景";

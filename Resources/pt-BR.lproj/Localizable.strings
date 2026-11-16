@@ -56,7 +56,13 @@
 
 // MARK: - 场景（Scene）
 "menu.section.scenes" = "CENAS";
-"menu.scene.dirty" = "Modificado";
+"menu.scene.dirty" = "Ajustado";
+"settings.section.scenes" = "Atalhos de cenas";
+"settings.scene.record" = "Atalho para “%@”";
+"settings.scene.recording" = "Pressione o novo atalho (Esc para cancelar). Atual: %@";
+"settings.scene.unset" = "Não definido";
+"settings.scene.clear" = "Limpar";
+"settings.scene.conflict" = "Esse atalho já está em uso. Tente outro.";
 "menu.scene.update" = "Atualizar “%@” com os valores atuais";
 "menu.scene.saveNew" = "Salvar como nova cena…";
 "menu.scene.restore" = "Restaurar cenas integradas";

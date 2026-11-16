@@ -56,7 +56,13 @@
 
 // MARK: - 场景（Scene）
 "menu.section.scenes" = "SCENE";
-"menu.scene.dirty" = "Modificato";
+"menu.scene.dirty" = "Regolato";
+"settings.section.scenes" = "Scorciatoie scene";
+"settings.scene.record" = "Scorciatoia per «%@»";
+"settings.scene.recording" = "Premi la nuova scorciatoia (Esc per annullare). Attuale: %@";
+"settings.scene.unset" = "Non impostata";
+"settings.scene.clear" = "Cancella";
+"settings.scene.conflict" = "Questa scorciatoia è già in uso. Provane un'altra.";
 "menu.scene.update" = "Aggiorna «%@» con i valori attuali";
 "menu.scene.saveNew" = "Salva come nuova scena…";
 "menu.scene.restore" = "Ripristina scene integrate";

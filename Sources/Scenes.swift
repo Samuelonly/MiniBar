@@ -20,10 +20,48 @@ struct Scene: Codable, Identifiable {
     var id: String
     var name: String          // 内置场景为空，名字由 L("scene.<id>") 给出
     var builtin: Bool
-    var hotkey: Int?          // 1…5，对应 ⌃⌥1…5
     var values: [String: SceneValues]   // 显示端口 key → 数值（含 "default"）
 
     var displayName: String { builtin ? L("scene.\(id)") : name }
+}
+
+/// 用户可改的快捷键绑定（设置页录制）
+struct HotkeyBinding: Codable, Equatable {
+    var keyCode: UInt16
+    var modifiers: UInt      // NSEvent.ModifierFlags 的原始位（仅 control/option/shift/command）
+
+    var display: String {
+        var text = ""
+        if modifiers & UInt(NSEvent.ModifierFlags.control.rawValue) != 0 { text += "⌃" }
+        if modifiers & UInt(NSEvent.ModifierFlags.option.rawValue) != 0 { text += "⌥" }
+        if modifiers & UInt(NSEvent.ModifierFlags.shift.rawValue) != 0 { text += "⇧" }
+        if modifiers & UInt(NSEvent.ModifierFlags.command.rawValue) != 0 { text += "⌘" }
+        return text + HotkeyBinding.keyName(keyCode)
+    }
+
+    /// NSEvent 修饰位 → Carbon 修饰位（RegisterEventHotKey 用）
+    var carbonModifiers: UInt32 {
+        let flags = NSEvent.ModifierFlags(rawValue: modifiers)
+        var carbon: UInt32 = 0
+        if flags.contains(.command) { carbon |= UInt32(cmdKey) }
+        if flags.contains(.shift)   { carbon |= UInt32(shiftKey) }
+        if flags.contains(.option)  { carbon |= UInt32(optionKey) }
+        if flags.contains(.control) { carbon |= UInt32(controlKey) }
+        return carbon
+    }
+
+    /// 常用键位显示名（数字/字母足够覆盖场景快捷键）
+    static func keyName(_ code: UInt16) -> String {
+        let map: [UInt16: String] = [
+            0: "A", 1: "S", 2: "D", 3: "F", 4: "H", 5: "G", 6: "Z", 7: "X", 8: "C", 9: "V",
+            11: "B", 12: "Q", 13: "W", 14: "E", 15: "R", 16: "Y", 17: "T",
+            18: "1", 19: "2", 20: "3", 21: "4", 22: "6", 23: "5", 24: "=", 25: "9",
+            26: "7", 27: "-", 28: "8", 29: "0", 30: "]", 31: "O", 32: "U", 33: "[",
+            34: "I", 35: "P", 37: "L", 38: "J", 39: "'", 40: "K", 41: ";", 42: "\\",
+            43: ",", 44: "/", 45: "N", 46: "M", 47: ".", 50: "`",
+        ]
+        return map[code] ?? "Key\(code)"
+    }
 }
 
 // MARK: - 存储
@@ -36,14 +74,28 @@ final class SceneStore {
 
     private(set) var scenes: [Scene] = []
     private(set) var active: [String: String] = [:]   // 显示端口 key → 场景 id
+    /// 场景 id → 快捷键（用户可在设置里改；缺省即未绑定）
+    private(set) var bindings: [String: HotkeyBinding] = [:]
 
     /// 内置 5 档：亮度跨度大、对比度跨度小且不同向——反向微调才是预设的价值
-    private static let builtinDefaults: [(id: String, hotkey: Int, b: Double, c: Double)] = [
-        ("daily",    1, 55, 50),
-        ("cinema",   2, 80, 55),
-        ("text",     3, 45, 55),
-        ("night",    4, 22, 40),
-        ("darkroom", 5,  8, 30),
+    private static let builtinDefaults: [(id: String, b: Double, c: Double)] = [
+        ("daily",    55, 50),
+        ("cinema",   80, 55),
+        ("text",     45, 55),
+        ("night",    22, 40),
+        ("darkroom",  8, 30),
+    ]
+
+    private static let defaultModifiers: UInt =
+        NSEvent.ModifierFlags.control.rawValue | NSEvent.ModifierFlags.option.rawValue
+
+    /// 默认快捷键 ⌃⌥1…5
+    static let defaultBindings: [String: HotkeyBinding] = [
+        "daily":    HotkeyBinding(keyCode: 18, modifiers: defaultModifiers),
+        "cinema":   HotkeyBinding(keyCode: 19, modifiers: defaultModifiers),
+        "text":     HotkeyBinding(keyCode: 20, modifiers: defaultModifiers),
+        "night":    HotkeyBinding(keyCode: 21, modifiers: defaultModifiers),
+        "darkroom": HotkeyBinding(keyCode: 23, modifiers: defaultModifiers),
     ]
 
     private var fileURL: URL {
@@ -56,36 +108,36 @@ final class SceneStore {
     private struct Payload: Codable {
         var scenes: [Scene]
         var active: [String: String]
+        var bindings: [String: HotkeyBinding]?
     }
 
     private init() {
         load()
-        HotkeyCenter.shared.install { [weak self] index in
-            guard let self,
-                  let scene = self.scenes.first(where: { $0.hotkey == index }),
-                  let displayID = DisplayPort.currentDisplayID() else { return }
-            self.apply(scene, on: displayID)
-            NotificationCenter.default.post(name: ModuleEvent.menuRefresh, object: nil)
-        }
+        refreshHotkeys()
     }
 
     // MARK: 读写盘
 
+    private func read(_ url: URL) -> Payload? {
+        guard let data = try? Data(contentsOf: url),
+              let payload = try? JSONDecoder().decode(Payload.self, from: data),
+              !payload.scenes.isEmpty else { return nil }
+        return payload
+    }
+
     private func load() {
-        if let data = try? Data(contentsOf: fileURL),
-           let payload = try? JSONDecoder().decode(Payload.self, from: data) {
+        if let payload = read(fileURL) {
             scenes = payload.scenes
             active = payload.active
-            if scenes.isEmpty { seedBuiltins() }
+            // 老版本文件没有 bindings → 补默认值；有则尊重用户设置（含「未绑定」）
+            bindings = payload.bindings ?? Self.defaultBindings
             return
         }
         // 损坏 → .bak 恢复 → 仍坏则重建
-        let bak = fileURL.appendingPathExtension("bak")
-        if let data = try? Data(contentsOf: bak),
-           let payload = try? JSONDecoder().decode(Payload.self, from: data) {
+        if let payload = read(fileURL.appendingPathExtension("bak")) {
             scenes = payload.scenes
             active = payload.active
-            if scenes.isEmpty { seedBuiltins() }
+            bindings = payload.bindings ?? Self.defaultBindings
             return
         }
         seedBuiltins()
@@ -93,7 +145,7 @@ final class SceneStore {
     }
 
     private func save() {
-        let payload = Payload(scenes: scenes, active: active)
+        let payload = Payload(scenes: scenes, active: active, bindings: bindings)
         guard let data = try? JSONEncoder().encode(payload) else { return }
         let bak = fileURL.appendingPathExtension("bak")
         try? FileManager.default.removeItem(at: bak)
@@ -103,9 +155,10 @@ final class SceneStore {
 
     private func seedBuiltins() {
         scenes = Self.builtinDefaults.map { d in
-            Scene(id: d.id, name: "", builtin: true, hotkey: d.hotkey,
+            Scene(id: d.id, name: "", builtin: true,
                   values: [Self.valueKey: SceneValues(brightness: d.b, contrast: d.c)])
         }
+        bindings = Self.defaultBindings
         active = [:]
         // 首次启动：激活「日常」。硬件写入放后台，避免首块面板构建被 DDC 阻塞
         if let displayID = DisplayPort.currentDisplayID() {
@@ -125,6 +178,56 @@ final class SceneStore {
 
     private func notify() {
         NotificationCenter.default.post(name: Self.changed, object: nil)
+    }
+
+    // MARK: 快捷键
+
+    enum BindingResult { case ok, duplicate, unavailable }
+
+    func binding(for scene: Scene) -> HotkeyBinding? { bindings[scene.id] }
+
+    /// 录制期间：临时注销全部热键；结束后按当前表重新注册
+    func suspendHotkeys() { HotkeyCenter.shared.suspend() }
+    func resumeHotkeys() { refreshHotkeys() }
+
+    /// 重新注册全部快捷键，返回注册失败（被系统/其它 App 占用）的场景 id
+    @discardableResult
+    private func refreshHotkeys() -> Set<String> {
+        let items: [(id: String, binding: HotkeyBinding)] = scenes.compactMap { scene in
+            guard let binding = bindings[scene.id] else { return nil }
+            return (scene.id, binding)
+        }
+        return HotkeyCenter.shared.update(items) { [weak self] sceneID in
+            guard let self,
+                  let scene = self.scenes.first(where: { $0.id == sceneID }),
+                  let displayID = DisplayPort.currentDisplayID() else { return }
+            self.apply(scene, on: displayID)
+            NotificationCenter.default.post(name: ModuleEvent.menuRefresh, object: nil)
+        }
+    }
+
+    /// 绑定 nil = 取消该场景的快捷键
+    @discardableResult
+    func setBinding(_ binding: HotkeyBinding?, for sceneID: String) -> BindingResult {
+        if let binding,
+           bindings.contains(where: { $0.key != sceneID && $0.value == binding }) {
+            return .duplicate
+        }
+        let previous = bindings
+        if let binding {
+            bindings[sceneID] = binding
+        } else {
+            bindings.removeValue(forKey: sceneID)
+        }
+        // 注册失败（系统占用等）→ 回滚，别让设置显示一个按不响的键
+        if refreshHotkeys().contains(sceneID) {
+            bindings = previous
+            refreshHotkeys()
+            return .unavailable
+        }
+        save()
+        notify()
+        return .ok
     }
 
     // MARK: 查询
@@ -176,7 +279,7 @@ final class SceneStore {
     func addScene(name: String, displayID: CGDirectDisplayID) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        let scene = Scene(id: UUID().uuidString, name: trimmed, builtin: false, hotkey: nil,
+        let scene = Scene(id: UUID().uuidString, name: trimmed, builtin: false,
                           values: [DisplayPort.key(for: displayID): SceneValues(
                             brightness: DisplayPort.brightness(displayID),
                             contrast: DisplayPort.contrast(displayID))])
@@ -199,7 +302,6 @@ final class SceneStore {
         var copy = scene
         copy.id = UUID().uuidString
         copy.builtin = false
-        copy.hotkey = nil
         copy.name = scene.displayName + L("scene.copySuffix")
         if let v = scene.values[DisplayPort.key(for: displayID)] {
             copy.values = [DisplayPort.key(for: displayID): v]
@@ -213,6 +315,8 @@ final class SceneStore {
     func delete(_ scene: Scene, displayID: CGDirectDisplayID) {
         guard !scene.builtin else { return }   // 内置永不消失
         scenes.removeAll { $0.id == scene.id }
+        bindings.removeValue(forKey: scene.id)
+        refreshHotkeys()
         let key = DisplayPort.key(for: displayID)
         if active[key] == scene.id {
             active[key] = Self.builtinDefaults.first!.id
@@ -224,25 +328,28 @@ final class SceneStore {
         notify()
     }
 
-    /// 只复位内置的名字/数值/热键，不动用户自建
+    /// 只复位内置的名字/数值/快捷键，不动用户自建
     func restoreBuiltins(displayID: CGDirectDisplayID?) {
         for d in Self.builtinDefaults {
+            bindings[d.id] = Self.defaultBindings[d.id]
             if let index = scenes.firstIndex(where: { $0.id == d.id }) {
                 scenes[index].name = ""
                 scenes[index].builtin = true
-                scenes[index].hotkey = d.hotkey
                 scenes[index].values = [Self.valueKey: SceneValues(brightness: d.b, contrast: d.c)]
             } else {
-                scenes.insert(Scene(id: d.id, name: "", builtin: true, hotkey: d.hotkey,
+                scenes.insert(Scene(id: d.id, name: "", builtin: true,
                                     values: [Self.valueKey: SceneValues(brightness: d.b, contrast: d.c)]),
                               at: 0)
             }
         }
-        // 内置排在前面，用户场景在后
+        // 内置排在前面（按默认顺序），用户场景在后
         scenes.sort { a, b in
             if a.builtin != b.builtin { return a.builtin }
-            return (a.hotkey ?? 99) < (b.hotkey ?? 99)
+            let ai = Self.builtinDefaults.firstIndex(where: { $0.id == a.id }) ?? 99
+            let bi = Self.builtinDefaults.firstIndex(where: { $0.id == b.id }) ?? 99
+            return ai < bi
         }
+        refreshHotkeys()
         save()
         notify()
         if let displayID,
@@ -257,18 +364,51 @@ final class SceneStore {
 
 final class HotkeyCenter {
     static let shared = HotkeyCenter()
-    private var refs: [EventHotKeyRef?] = []
+    private var refs: [EventHotKeyRef] = []
+    /// Carbon 的 id 从 1 起，映射到这里的下标
+    private var registeredIDs: [String] = []
     private var handlerRef: EventHandlerRef?
-    private var callback: ((Int) -> Void)?
+    private var callback: ((String) -> Void)?
 
     private static let signature: OSType = 0x4D42_4152   // 'MBAR'
-    /// 键盘码：1…5 主键盘
-    private static let keyCodes: [UInt32] = [0, 18, 19, 20, 21, 23]
 
-    func install(_ callback: @escaping (Int) -> Void) {
-        guard handlerRef == nil else { self.callback = callback; return }
+    /// 全量替换注册：先全注销再按新表注册。返回注册失败的场景 id（系统/其它 App 占用）
+    @discardableResult
+    func update(_ items: [(id: String, binding: HotkeyBinding)],
+                callback: @escaping (String) -> Void) -> Set<String> {
         self.callback = callback
+        unregisterAll()
+        installHandlerIfNeeded()
 
+        var failed = Set<String>()
+        for item in items {
+            let hotKeyID = EventHotKeyID(signature: Self.signature,
+                                         id: UInt32(registeredIDs.count + 1))
+            var ref: EventHotKeyRef?
+            let status = RegisterEventHotKey(UInt32(item.binding.keyCode),
+                                             item.binding.carbonModifiers,
+                                             hotKeyID, GetApplicationEventTarget(), 0, &ref)
+            if status == noErr, let ref {
+                refs.append(ref)
+                registeredIDs.append(item.id)
+            } else {
+                failed.insert(item.id)
+            }
+        }
+        return failed
+    }
+
+    private func unregisterAll() {
+        for ref in refs { UnregisterEventHotKey(ref) }
+        refs.removeAll()
+        registeredIDs.removeAll()
+    }
+
+    /// 录制快捷键期间临时注销全部热键：否则按到已注册的组合会被热键吞掉，录制窗收不到
+    func suspend() { unregisterAll() }
+
+    private func installHandlerIfNeeded() {
+        guard handlerRef == nil else { return }
         var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard),
                                  eventKind: UInt32(kEventHotKeyPressed))
         InstallEventHandler(GetApplicationEventTarget(), { _, event, userData -> OSStatus in
@@ -278,23 +418,31 @@ final class HotkeyCenter {
                               EventParamType(typeEventHotKeyID), nil,
                               MemoryLayout<EventHotKeyID>.size, nil, &hotKeyID)
             let center = Unmanaged<HotkeyCenter>.fromOpaque(userData).takeUnretainedValue()
-            center.callback?(Int(hotKeyID.id))
+            let index = Int(hotKeyID.id) - 1
+            if center.registeredIDs.indices.contains(index) {
+                center.callback?(center.registeredIDs[index])
+            }
             return noErr
         }, 1, &spec, Unmanaged.passUnretained(self).toOpaque(), &handlerRef)
-
-        for index in 1...5 {
-            var hotKeyID = EventHotKeyID(signature: Self.signature, id: UInt32(index))
-            var ref: EventHotKeyRef?
-            RegisterEventHotKey(Self.keyCodes[index], UInt32(controlKey | optionKey),
-                                hotKeyID, GetApplicationEventTarget(), 0, &ref)
-            refs.append(ref)
-        }
     }
 }
 
 // MARK: - 面板里的场景区块
 
 struct SceneBlockView: View {
+    static let sceneRowHeight: CGFloat = 26
+    static let dividerHeight: CGFloat = 9
+
+    /// 面板高度按行高模型解析式算，这里必须给出区块的真实高度
+    static var blockHeight: CGFloat {
+        let store = SceneStore.shared
+        var height = CGFloat(store.scenes.count) * sceneRowHeight
+        let dirty = DisplayPort.currentDisplayID().map { store.isDirty(displayID: $0) } ?? false
+        if dirty { height += dividerHeight + HUDMenuPanel.rowHeight }
+        height += dividerHeight + HUDMenuPanel.rowHeight * 2
+        return height
+    }
+
     @State private var revision = 0
     @State private var hovered: String?
 
@@ -362,12 +510,13 @@ struct SceneBlockView: View {
             Text("\(Int(v.brightness.rounded()))/\(Int(v.contrast.rounded()))")
                 .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(PanelAppearance.current.label)
-            if let hotkey = scene.hotkey {
-                Text("⌃⌥\(hotkey)")
+            if let binding = store.binding(for: scene) {
+                Text(binding.display)
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(PanelAppearance.current.label)
-                    .frame(width: 28, alignment: .trailing)
-            } else {
+                    .frame(minWidth: 28, alignment: .trailing)
+            }
+            if !scene.builtin {
                 Menu {
                     Button(L("scene.menu.rename")) {
                         guard let name = SceneDialogs.prompt(
@@ -401,7 +550,7 @@ struct SceneBlockView: View {
         }
         .padding(.horizontal, HUDMenuPanel.rowHInset)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: 26)
+        .frame(height: Self.sceneRowHeight)
         .background(
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color.primary.opacity(isHover ? 0.08 : 0))
@@ -467,6 +616,17 @@ struct SceneBlockView: View {
 // MARK: - 原生输入弹窗（borderless 面板拿不到键盘焦点，内联改名做不到）
 
 enum SceneDialogs {
+    /// 面板在 statusBar 层级；NSAlert 默认 modalPanel 会被面板盖住，同层抬到最前
+    private static func run(_ alert: NSAlert) -> NSApplication.ModalResponse {
+        NSApp.activate(ignoringOtherApps: true)
+        let window = alert.window
+        DispatchQueue.main.async {
+            window.level = .statusBar
+            window.orderFrontRegardless()
+        }
+        return alert.runModal()
+    }
+
     static func prompt(title: String, message: String, placeholder: String,
                        defaultText: String = "") -> String? {
         let alert = NSAlert()
@@ -478,8 +638,7 @@ enum SceneDialogs {
         field.stringValue = defaultText
         field.placeholderString = placeholder
         alert.accessoryView = field
-        NSApp.activate(ignoringOtherApps: true)
-        let response = alert.runModal()
+        let response = run(alert)
         guard response == .alertFirstButtonReturn else { return nil }
         let text = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         return text.isEmpty ? nil : text
@@ -491,8 +650,7 @@ enum SceneDialogs {
         alert.informativeText = message
         alert.addButton(withTitle: action)
         alert.addButton(withTitle: L("common.cancel"))
-        NSApp.activate(ignoringOtherApps: true)
-        return alert.runModal() == .alertFirstButtonReturn
+        return run(alert) == .alertFirstButtonReturn
     }
 
     enum SwitchChoice { case save, discard, cancel }
@@ -502,8 +660,7 @@ enum SceneDialogs {
         let alert = NSAlert()
         alert.messageText = message
         alert.addButton(withTitle: L("common.ok"))
-        NSApp.activate(ignoringOtherApps: true)
-        alert.runModal()
+        _ = run(alert)
     }
 
     /// dirty 状态下切换场景：保存并切换 / 丢弃并切换 / 取消
@@ -514,8 +671,7 @@ enum SceneDialogs {
         alert.addButton(withTitle: L("scene.switch.save"))
         alert.addButton(withTitle: L("scene.switch.discard"))
         alert.addButton(withTitle: L("common.cancel"))
-        NSApp.activate(ignoringOtherApps: true)
-        switch alert.runModal() {
+        switch run(alert) {
         case .alertFirstButtonReturn:  return .save
         case .alertSecondButtonReturn: return .discard
         default:                       return .cancel

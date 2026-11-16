@@ -56,7 +56,13 @@
 
 // MARK: - 场景（Scene）
 "menu.section.scenes" = "СЦЕНЫ";
-"menu.scene.dirty" = "Изменено";
+"menu.scene.dirty" = "Скорректировано";
+"settings.section.scenes" = "Сочетания клавиш сцен";
+"settings.scene.record" = "Сочетание для «%@»";
+"settings.scene.recording" = "Нажмите новое сочетание (Esc — отмена). Сейчас: %@";
+"settings.scene.unset" = "Не задано";
+"settings.scene.clear" = "Очистить";
+"settings.scene.conflict" = "Это сочетание уже занято. Попробуйте другое.";
 "menu.scene.update" = "Обновить «%@» текущими значениями";
 "menu.scene.saveNew" = "Сохранить как новую сцену…";
 "menu.scene.restore" = "Восстановить встроенные сцены";
