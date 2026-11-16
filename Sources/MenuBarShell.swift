@@ -29,12 +29,15 @@ final class MenuBarShell: NSObject {
 
     func install() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        // 状态栏图标：优先用 bundle 里的 PNG，回退到系统符号
+        // 状态栏图标：优先用 bundle 里的 PNG，回退到系统符号。
+        // 源图是 SVG 几何矢量重绘的 40×40（= 20pt @2x），逻辑尺寸固定 20×20pt：
+        // 之前是 22px 的 1x 位图，Retina 上被拉伸 2 倍，看起来发虚、也显得偏大。
         if let imgPath = Bundle.main.path(forResource: "MiniBar-menubar", ofType: "png"),
            let img = NSImage(contentsOfFile: imgPath) {
-            img.size = NSSize(width: 20, height: 20)  // 状态栏视觉尺寸定为 20×20
+            img.size = NSSize(width: 18, height: 18)  // 状态栏视觉尺寸定为 18×18pt
             img.isTemplate = true  // 让系统自动适配深浅色
             item.button?.image = img
+            item.button?.imageScaling = .scaleProportionallyDown
         } else {
             item.button?.image = NSImage(systemSymbolName: "slider.horizontal.3",
                                          accessibilityDescription: "MiniBar")

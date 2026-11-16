@@ -8,6 +8,11 @@ import SwiftUI
 final class SettingsPanel: NSPanel {
     static let width: CGFloat = 380
     private var skinObserver: Any?
+    private var globalClickMonitor: Any?
+    private var localClickMonitor: Any?
+    private var keyMonitor: Any?
+    /// 开窗时刻：用于吞掉「点设置菜单」同一次点击，避免刚弹出就被外部点击判定关掉
+    private var shownAt = Date.distantPast
 
     init() {
         // 窗口尺寸 = 内容实测尺寸。宽度固定 380，高度取换行后的自然高度，
@@ -55,7 +60,7 @@ final class SettingsPanel: NSPanel {
         container.layer?.borderWidth = 1
         container.layer?.borderColor = PanelAppearance.current.borderNS.cgColor
 
-        let host = NSHostingView(rootView: SettingsContent(onClose: { [weak self] in self?.close() }))
+        let host = FirstMouseHostingView(rootView: SettingsContent(onClose: { [weak self] in self?.close() }))
         // 必须关掉 sizingOptions：默认行为会让 hosting view 用 intrinsic 尺寸反向改窗口，
         // 与固定的 contentRect 冲突后内容被压成 0（窗口 visible 却什么都不画）
         host.sizingOptions = []
@@ -66,12 +71,40 @@ final class SettingsPanel: NSPanel {
         container.addSubview(host)
         contentView = container
         center()
+        // 拖空白处即可移动（borderless 窗口默认不可拖）
+        isMovableByWindowBackground = true
 
         // 手动换肤 → 立即重绘；系统深浅色变化 → 未手动时跟随（applySkin 内部判断）
         skinObserver = NotificationCenter.default.addObserver(
             forName: PanelAppearance.changed, object: nil, queue: .main
         ) { [weak self] _ in self?.applySkin() }
         NSApp.addObserver(self, forKeyPath: "effectiveAppearance", options: [.new], context: nil)
+        installDismissMonitors()
+    }
+
+    // MARK: - 点外部 / Esc 关闭（与主面板同一套交互）
+
+    private func installDismissMonitors() {
+        // 全局：其它 App 里的点击
+        globalClickMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+        ) { [weak self] _ in
+            guard let self, self.isVisible,
+                  Date().timeIntervalSince(self.shownAt) > 0.2 else { return }
+            if !self.frame.contains(NSEvent.mouseLocation) { self.close() }
+        }
+        // 本地：本 App 内（主面板）的点击
+        localClickMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] event in
+            guard let self, self.isVisible,
+                  Date().timeIntervalSince(self.shownAt) > 0.2 else { return event }
+            if !self.frame.contains(NSEvent.mouseLocation) { self.close() }
+            return event
+        }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, self.isVisible, event.keyCode == 53 else { return event }
+            self.close()
+            return nil
+        }
     }
 
     /// 应用当前有效皮肤：窗口/托管 appearance + 容器底色描边 + 重建内容（colorScheme 随之更新）
@@ -95,6 +128,9 @@ final class SettingsPanel: NSPanel {
     deinit {
         NSApp.removeObserver(self, forKeyPath: "effectiveAppearance")
         if let skinObserver { NotificationCenter.default.removeObserver(skinObserver) }
+        for monitor in [globalClickMonitor, localClickMonitor, keyMonitor] {
+            if let monitor { NSEvent.removeMonitor(monitor) }
+        }
     }
 
     /// nonactivatingPanel 不会 becomeKey，系统红 X 不派发 action
@@ -105,6 +141,7 @@ final class SettingsPanel: NSPanel {
 
     /// nonactivating：弹出不抢前台 App 焦点（PRD §10 遥控器哲学的物理体现）
     func show() {
+        shownAt = Date()
         orderFrontRegardless()
     }
 }

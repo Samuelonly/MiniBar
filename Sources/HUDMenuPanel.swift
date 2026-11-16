@@ -29,18 +29,23 @@ private let hudAccent = Color(red: 77 / 255, green: 157 / 255, blue: 255 / 255)
 final class HUDMenuPanel: NSPanel {
     static let width: CGFloat = 320
 
-    // 尺寸常量 —— 逐条对应 mockups/menubar.html
-    static let panelPadding: CGFloat = 10         // .panel{padding:10px}
-    static let rowHeight: CGFloat = 26            // .item/.disk{min-height:24;padding:5px 6px}
-    static let sliderRowHeight: CGFloat = 30      // .slider-row{height:30px}
-    static let chipRowHeight: CGFloat = 40        // .grid-row{padding:4px 6px 6px} + .chip{height:30px}
-    static let screenLabelHeight: CGFloat = 22    // .screen-label{padding:6px 6px 2px}
-    static let sectionHeight: CGFloat = 22        // .sec{padding:7px 6px 3px} + 10px 字
-    static let separatorHeight: CGFloat = 11      // .sep{height:1px;margin:5px 6px}
-    static let noteHeight: CGFloat = 22           // 说明行 .child-row{min-height:22px}
-    static let meterRowHeight: CGFloat = 22       // 输入电平行 .child-row{min-height:22px}
-    static let childRowHeight: CGFloat = 26       // .child-row{padding:4px 8px} + .switch.sm{height:18px}
-    static let childHInset: CGFloat = 8           // .child-row{padding:4px 8px}
+    // 尺寸常量 —— v0.3.1 呼吸感调整（对齐 Apple 菜单的纵向节奏）：
+    // 行高 26→30、滑杆行 30→34、节标题 22→26、分隔线 11→15、说明/电平行 22→26、
+    // chip 行 40→44、面板内边距 10→12、左右内缩 6→8、子行 26→28。
+    // 面板宽度保持 320（用户否决 332：不是常规断点值），滑杆少 4pt 仍在 100pt 下限之上。
+    static let panelPadding: CGFloat = 12
+    static let rowHeight: CGFloat = 30
+    static let sliderRowHeight: CGFloat = 34
+    static let chipRowHeight: CGFloat = 44
+    static let screenLabelHeight: CGFloat = 26
+    static let sectionHeight: CGFloat = 26
+    static let separatorHeight: CGFloat = 15
+    static let noteHeight: CGFloat = 26
+    static let meterRowHeight: CGFloat = 26
+    static let childRowHeight: CGFloat = 28
+    static let childHInset: CGFloat = 8
+    /// 行左右内缩（原 HTML 的 6px，放宽到 8px 换取呼吸感）
+    static let rowHInset: CGFloat = 8
 
     fileprivate weak var shell: MenuBarShell?
     fileprivate var panelState: HUDPanelState?
@@ -156,7 +161,7 @@ final class HUDMenuPanel: NSPanel {
 
         let state = HUDPanelState()
         panelState = state
-        let host = NSHostingView(rootView: makeContent(menu: menu, scrollable: scrollable,
+        let host = FirstMouseHostingView(rootView: makeContent(menu: menu, scrollable: scrollable,
                                                        cap: cap, state: state))
         host.sizingOptions = []
         contentView = host
@@ -495,9 +500,9 @@ private struct HUDMenuContent: View {
             .tracking(1.6)
             .foregroundStyle(.secondary)
             .lineLimit(1)
-            .padding(.horizontal, 6)
-            .padding(.top, 7)
-            .padding(.bottom, 3)
+            .padding(.horizontal, HUDMenuPanel.rowHInset)
+            .padding(.top, 9)
+            .padding(.bottom, 5)
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: HUDMenuPanel.sectionHeight)
     }
@@ -506,8 +511,8 @@ private struct HUDMenuContent: View {
         Rectangle()
             .fill(PanelAppearance.current.separator)
             .frame(height: 1)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 5)
+            .padding(.horizontal, HUDMenuPanel.rowHInset)
+            .padding(.vertical, 7)
             .frame(maxWidth: .infinity)
             .frame(height: HUDMenuPanel.separatorHeight)
     }
@@ -519,9 +524,9 @@ private struct HUDMenuContent: View {
             .foregroundStyle(.primary)
             .lineLimit(1)
             .truncationMode(.tail)
-            .padding(.horizontal, 6)
-            .padding(.top, 6)
-            .padding(.bottom, 2)
+            .padding(.horizontal, HUDMenuPanel.rowHInset)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: HUDMenuPanel.screenLabelHeight)
     }
@@ -530,9 +535,9 @@ private struct HUDMenuContent: View {
     private func noteRow(_ title: String) -> some View {
         Text(title)
             .font(.system(size: 12))
-            .foregroundStyle(.tertiary)
+            .foregroundStyle(PanelAppearance.current.label)
             .lineLimit(1)
-            .padding(.horizontal, 14)   // .child-row 的 margin 6 + padding 8
+            .padding(.horizontal, 16)   // .child-row 的 margin 8 + padding 8
             .padding(.vertical, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: HUDMenuPanel.noteHeight)
@@ -612,9 +617,9 @@ private struct HUDMenuContent: View {
                 }
             }
         }
-        .padding(.horizontal, 6)
-        .padding(.top, 4)
-        .padding(.bottom, 6)
+        .padding(.horizontal, HUDMenuPanel.rowHInset)
+        .padding(.top, 6)
+        .padding(.bottom, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: HUDMenuPanel.chipRowHeight)
     }
@@ -681,10 +686,10 @@ private struct DiskRow: View {
                 if let cap = meta?.caption {
                     Text(cap)
                         .font(.system(size: 11, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.9))
+                        .foregroundStyle(PanelAppearance.current.label)
                         .padding(.horizontal, 4)
                         .padding(.vertical, 1)
-                        .background(Color.black.opacity(0.7), in: RoundedRectangle(cornerRadius: 4))
+                        .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 4))
                         .lineLimit(1)
                 }
                 Image(systemName: ejected ? "arrow.clockwise" : "eject.fill")
@@ -706,7 +711,7 @@ private struct DiskRow: View {
 private struct Hoverable<Content: View>: View {
     let content: Content
     var height: CGFloat = HUDMenuPanel.rowHeight
-    var hInset: CGFloat = 6
+    var hInset: CGFloat = HUDMenuPanel.rowHInset
     var radius: CGFloat = 10
     var hoverOpacity: CGFloat = 0.08
     var onClick: (() -> Void)?
@@ -804,7 +809,7 @@ private struct MenuSwitchRow: View {
                 if let tag {
                     Text(tag)
                         .font(.system(size: 10, design: .monospaced))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(PanelAppearance.current.label)
                         .lineLimit(1)
                         .padding(.horizontal, 5)
                         .frame(height: 15)
@@ -914,7 +919,7 @@ private struct HUDliderRow: View {
             }
             .frame(height: 16)
         }
-        .padding(.horizontal, 6)
+        .padding(.horizontal, HUDMenuPanel.rowHInset)
         .frame(height: HUDMenuPanel.sliderRowHeight)
         .onHover { inside in
             if inside {
@@ -1048,7 +1053,7 @@ private struct MicLevelRow: View {
         HStack(spacing: 12) {
             Text(L("menu.mic.inputLevel"))
                 .font(.system(size: 12))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(PanelAppearance.current.label)
                 .lineLimit(1)
             Spacer(minLength: 12)
             HStack(spacing: 2) {

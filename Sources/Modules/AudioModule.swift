@@ -112,6 +112,7 @@ final class AudioModule: NSObject, MiniBarModule {
               let number = meta.payload as? NSNumber else { return }
         setDefaultDevice(AudioDeviceID(number.uint32Value),
                          selector: kAudioHardwarePropertyDefaultOutputDevice)
+        commitSelection(sender, restartMeter: false)
     }
 
     @objc private func switchInput(_ sender: NSMenuItem) {
@@ -119,6 +120,27 @@ final class AudioModule: NSObject, MiniBarModule {
               let number = meta.payload as? NSNumber else { return }
         setDefaultDevice(AudioDeviceID(number.uint32Value),
                          selector: kAudioHardwarePropertyDefaultInputDevice)
+        commitSelection(sender, restartMeter: true)
+    }
+
+    /// 写入 CoreAudio 后必须自己回写 UI 状态。
+    /// 之前只写系统、不回写 item.state，HUD 子行的单选互斥（state == .on 才关兄弟）
+    /// 永远不成立，胶囊要等下次 buildMenuModel 重新读取才动 —— 就是「闪一下才对」。
+    /// 蓝牙设备切换要等链路建立，CoreAudio 不是瞬时生效，所以先乐观置位，
+    /// 600ms 后再广播一次 menuRefresh 用真实状态校准（切失败也能自己纠回来）。
+    private func commitSelection(_ sender: NSMenuItem, restartMeter: Bool) {
+        for item in sender.menu?.items ?? [] where item !== sender {
+            if item.representedObject is MenuRowMeta { item.state = .off }
+        }
+        sender.state = .on
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            // 输入设备变了，电平表的 IOProc 还挂在旧设备上，必须重启到新设备
+            if restartMeter, MicLevelMonitor.shared.isRunning {
+                MicLevelMonitor.shared.stop()
+                MicLevelMonitor.shared.start()
+            }
+            NotificationCenter.default.post(name: ModuleEvent.menuRefresh, object: nil)
+        }
     }
 
     private func deviceSubmenu(_ devices: [AudioDeviceInfo], defaultID: AudioDeviceID,

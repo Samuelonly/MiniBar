@@ -27,8 +27,17 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>CFBundleDevelopmentRegion</key><string>zh-Hans</string>
     <key>CFBundleLocalizations</key>
     <array>
-        <string>zh-Hans</string>
         <string>en</string>
+        <string>zh-Hans</string>
+        <string>zh-Hant</string>
+        <string>ja</string>
+        <string>ko</string>
+        <string>fr</string>
+        <string>de</string>
+        <string>es</string>
+        <string>it</string>
+        <string>pt-BR</string>
+        <string>ru</string>
     </array>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
@@ -39,10 +48,11 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
-# i18n：语言资源进 bundle（先确保目标目录存在，否则 cp -R 会把 lproj 内容当 Resources）
+# i18n：全部语言资源进 bundle（11 个 lproj，之前只拷了 zh-Hans/en）
 mkdir -p "$APP/Contents/Resources"
-cp -R Resources/zh-Hans.lproj "$APP/Contents/Resources/"
-cp -R Resources/en.lproj "$APP/Contents/Resources/"
+for d in Resources/*.lproj; do
+    [ -d "$d" ] && cp -R "$d" "$APP/Contents/Resources/"
+done
 
 # App 图标 + 状态栏图标
 if [ -f Resources/MiniBar.icns ]; then cp Resources/MiniBar.icns "$APP/Contents/Resources/"; fi

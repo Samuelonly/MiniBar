@@ -196,8 +196,8 @@ final class SliderRowView: NSView {
     private func showValueTag() {
         let pct = CGFloat((slider.doubleValue - slider.minValue)
             / max(slider.maxValue - slider.minValue, 0.001))
-        // 轨道起点 = padding 6 + 图标15 + gap12 + 共享标签宽 + gap12；旋钮宽 14
-        let trackStart: CGFloat = 6 + 15 + 12 + Self.sharedLabelWidth + 12
+        // 轨道起点 = 行内缩 8 + 图标15 + gap12 + 共享标签宽 + gap12；旋钮宽 14
+        let trackStart: CGFloat = 8 + 15 + 12 + Self.sharedLabelWidth + 12
         let trackWidth = max(bounds.width - trackStart - 14, 10)
         let x = trackStart + trackWidth * pct
         valueTag.stringValue = String(Int(pct * 100))
@@ -338,6 +338,13 @@ enum ModuleEvent {
 //   点过一次 chip     → 记住用户选择，之后永远用手动的，不再随系统变。
 // chip 只切 MiniBar 自己的面板皮肤，不改系统外观。
 
+/// 菜单栏面板用的 HostingView：接受「首次点击」。
+/// borderless / 非 key 面板在 App 未激活时，第一次点击会被系统当成激活窗口吞掉，
+/// 表现就是「设置要点两次」「面板刚弹出来第一下点了没反应」。
+final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
 enum PanelSkin: String {
     case light, dark
 
@@ -364,6 +371,13 @@ enum PanelSkin: String {
     }
     var separator: Color { self == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.12) }
     var tagBorder: Color { self == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.16) }
+    /// 次级信息文字（设备类型 tag / 磁盘容量）：深色 #686868、浅色 #6E6E73。
+    /// 统一一处，避免 tag 用 .tertiary 太淡、容量又用白字黑底太重。
+    var label: Color {
+        self == .dark
+            ? Color(red: 104.0 / 255.0, green: 104.0 / 255.0, blue: 104.0 / 255.0)
+            : Color(red: 110.0 / 255.0, green: 110.0 / 255.0, blue: 115.0 / 255.0)
+    }
 }
 
 enum PanelAppearance {
