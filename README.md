@@ -1,12 +1,16 @@
+<p align="center">
+  <img src="docs/assets/icon.png" width="256" alt="MiniBar icon" />
+</p>
+
 # MiniBar
+<p align="center">
+  Brightness, volume, power and storage — one native panel in your menu bar.<br>
+  Built with SwiftUI and AppKit. No Electron, no background bloat.
+</p>
 
-**[中文](README.zh-CN.md)**
-
-Brightness, volume, power and storage — one native panel in your menu bar.
-
-Built with SwiftUI and AppKit. No Electron, no background bloat.
-
-> v0.3.0 · macOS 15+ · Apple Silicon only
+<p align="center">
+  **v0.3.0 · macOS 15+ · Apple Silicon only · [中文](README.zh-CN.md)**
+</p>
 
 ---
 

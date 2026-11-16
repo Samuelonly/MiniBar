@@ -1,12 +1,16 @@
+<p align="center">
+  <img src="docs/assets/icon.png" width="256" alt="MiniBar 图标" />
+</p>
+
 # MiniBar
+<p align="center">
+  亮度、音量、电源、存储——菜单栏里的一个原生面板。<br>
+  由 SwiftUI 与 AppKit 打造。没有 Electron，没有臃肿的后台。
+</p>
 
-**[English](README.md)**
-
-亮度、音量、电源、存储——菜单栏里的一个原生面板。
-
-由 SwiftUI 与 AppKit 打造。没有 Electron，没有臃肿的后台。
-
-> v0.3.0 · macOS 15+ · 仅支持 Apple Silicon
+<p align="center">
+  **v0.3.0 · macOS 15+ · 仅支持 Apple Silicon · [English](README.md)**
+</p>
 
 ---
 
