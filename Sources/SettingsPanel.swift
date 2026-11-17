@@ -247,9 +247,9 @@ enum HotkeyRecorder {
                                             hostFrame: hostFrame)
         self.controller = controller
         isActive = true
-        controller.begin { [weak self] outcome in
-            self?.isActive = false
-            self?.controller = nil
+        controller.begin { outcome in
+            HotkeyRecorder.isActive = false
+            HotkeyRecorder.controller = nil
             completion(outcome)
         }
     }
