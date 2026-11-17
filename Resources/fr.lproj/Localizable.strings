@@ -71,7 +71,7 @@
 "settings.scene.conflict" = "Ce raccourci est déjà utilisé. Essayez-en un autre.";
 "menu.scene.update" = "Mettre à jour « %@ » avec les valeurs actuelles";
 "menu.scene.saveNew" = "Enregistrer comme nouvelle scène…";
-"menu.scene.restore" = "Restaurer les scènes intégrées";
+"menu.scene.restore" = "Restaurer les valeurs par défaut";
 "scene.daily" = "Quotidien";
 "scene.cinema" = "Cinéma";
 "scene.text" = "Texte";
@@ -85,8 +85,8 @@
 "scene.new.message" = "Enregistre la luminosité et le contraste actuels comme une scène nommée.";
 "scene.new.placeholder" = "Nom de la scène";
 "scene.rename.title" = "Renommer la scène";
-"scene.restore.title" = "Restaurer les scènes intégrées ?";
-"scene.restore.message" = "Seules les 5 scènes intégrées sont réinitialisées. Vos scènes restent intactes.";
+"scene.restore.title" = "Restaurer les valeurs par défaut ?";
+"scene.restore.message" = "Seules les 5 scènes par défaut sont restaurées. Vos scènes restent intactes.";
 "scene.restore.action" = "Restaurer";
 "common.ok" = "OK";
 "common.cancel" = "Annuler";

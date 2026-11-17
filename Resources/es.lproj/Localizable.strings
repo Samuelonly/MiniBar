@@ -71,7 +71,7 @@
 "settings.scene.conflict" = "Ese atajo ya está en uso. Prueba con otro.";
 "menu.scene.update" = "Actualizar «%@» con los valores actuales";
 "menu.scene.saveNew" = "Guardar como escena nueva…";
-"menu.scene.restore" = "Restaurar escenas integradas";
+"menu.scene.restore" = "Restaurar valores predeterminados";
 "scene.daily" = "Diario";
 "scene.cinema" = "Cine";
 "scene.text" = "Texto";
@@ -85,8 +85,8 @@
 "scene.new.message" = "Guarda el brillo y el contraste actuales como una escena con nombre.";
 "scene.new.placeholder" = "Nombre de la escena";
 "scene.rename.title" = "Renombrar escena";
-"scene.restore.title" = "¿Restaurar las escenas integradas?";
-"scene.restore.message" = "Solo se restablecen las 5 escenas integradas. Tus escenas no se tocan.";
+"scene.restore.title" = "¿Restaurar los valores predeterminados?";
+"scene.restore.message" = "Solo se restauran las 5 escenas predeterminadas. Tus escenas no se tocan.";
 "scene.restore.action" = "Restaurar";
 "common.ok" = "Aceptar";
 "common.cancel" = "Cancelar";

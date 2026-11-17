@@ -71,7 +71,7 @@
 "settings.scene.conflict" = "이 단축키는 이미 사용 중입니다. 다른 키를 사용하세요.";
 "menu.scene.update" = "현재 값으로 “%@” 업데이트";
 "menu.scene.saveNew" = "새 장면으로 저장…";
-"menu.scene.restore" = "내장 장면 복원";
+"menu.scene.restore" = "기본값으로 복원";
 "scene.daily" = "일상";
 "scene.cinema" = "영상";
 "scene.text" = "텍스트";
@@ -85,8 +85,8 @@
 "scene.new.message" = "현재 밝기와 대비를 이름 있는 장면으로 저장합니다.";
 "scene.new.placeholder" = "장면 이름";
 "scene.rename.title" = "장면 이름 변경";
-"scene.restore.title" = "내장 장면을 복원할까요?";
-"scene.restore.message" = "내장 장면 5개만 초기화되며, 직접 만든 장면은 그대로 유지됩니다.";
+"scene.restore.title" = "기본값으로 복원할까요?";
+"scene.restore.message" = "기본 장면 5개만 복원되며, 직접 만든 장면은 그대로 유지됩니다.";
 "scene.restore.action" = "복원";
 "common.ok" = "확인";
 "common.cancel" = "취소";

@@ -124,6 +124,13 @@ final class SliderRowView: NSView {
         slider.target?.perform(slider.action, with: slider)
     }
 
+    /// 场景/热键经账本写入后，把新值灌进迁移保留的旧滑杆壳（壳不变，值跟上真实状态）
+    func setSliderValue(_ value: Double) {
+        let clamped = max(slider.minValue, min(slider.maxValue, value))
+        guard abs(slider.doubleValue - clamped) > 0.0001 else { return }
+        slider.doubleValue = clamped
+    }
+
     init(title: String, symbol: String, slider: NSSlider, rowWidth: CGFloat) {
         self.slider = slider
         rowTitle = title
@@ -377,6 +384,14 @@ enum PanelSkin: String {
         self == .dark
             ? Color(red: 104.0 / 255.0, green: 104.0 / 255.0, blue: 104.0 / 255.0)
             : Color(red: 110.0 / 255.0, green: 110.0 / 255.0, blue: 115.0 / 255.0)
+    }
+    /// 动作行文字（用当前值更新 / 保存为新场景 / 恢复默认）：
+    /// 11px 小字可读性优先——深底浅天蓝 #8ABAFF、浅底深海蓝 #1D5FBF。
+    /// 独立定义，不与系统强调色共享：Switch / 激活圆点 / 滑杆角标不受影响
+    var actionAccent: Color {
+        self == .dark
+            ? Color(red: 138.0 / 255.0, green: 186.0 / 255.0, blue: 1.0)
+            : Color(red: 29.0 / 255.0, green: 95.0 / 255.0, blue: 191.0 / 255.0)
     }
 }
 

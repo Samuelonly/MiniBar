@@ -70,8 +70,8 @@
 "settings.scene.clear" = "清除";
 "settings.scene.conflict" = "這個快速鍵已被占用，換一個試試。";
 "menu.scene.update" = "用目前值更新「%@」";
-"menu.scene.saveNew" = "存為新場景…";
-"menu.scene.restore" = "恢復內建場景";
+"menu.scene.saveNew" = "保存為新場景…";
+"menu.scene.restore" = "恢復預設";
 "scene.daily" = "日常";
 "scene.cinema" = "影像";
 "scene.text" = "文稿";
@@ -85,8 +85,8 @@
 "scene.new.message" = "將目前亮度與對比度存成具名場景。";
 "scene.new.placeholder" = "場景名稱";
 "scene.rename.title" = "重新命名場景";
-"scene.restore.title" = "恢復內建場景？";
-"scene.restore.message" = "只重設 5 個內建場景，你自建的場景不受影響。";
+"scene.restore.title" = "恢復預設？";
+"scene.restore.message" = "只恢復 5 個預設場景，你自建的場景不受影響。";
 "scene.restore.action" = "恢復";
 "common.ok" = "確定";
 "common.cancel" = "取消";

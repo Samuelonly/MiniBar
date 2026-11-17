@@ -94,17 +94,7 @@ enum DisplayPort {
     static func setBrightness(_ percent: Double, on displayID: CGDirectDisplayID) -> Bool {
         let clamped = min(max(percent, 5), 100)
         UserDefaults.standard.set(clamped / 100, forKey: brightnessKey(displayID))
-
-        if let endpoint = endpoint(for: displayID) {
-            return DDCTransport.shared?.write(endpoint, command: .brightness, percent: clamped / 100) ?? false
-        }
-        if let service = ioService(for: displayID) {
-            IODisplaySetFloatParameter(service, 0, kIODisplayBrightnessKey as CFString,
-                                       Float32(clamped / 100))
-            IOObjectRelease(service)
-            return true
-        }
-        return false
+        return hardwareBrightness(clamped, on: displayID)
     }
 
     /// 对比度：0…100。仅外接屏；写失败返回 false（滑杆可回弹）
@@ -117,11 +107,43 @@ enum DisplayPort {
         return ok
     }
 
-    /// 一次性写入一组场景值
+    /// 一次性写入一组场景值：先记账（滑杆/圆点/面板立刻跟上），硬件写入后台走——
+    /// DDC 每笔有协议级等待（≥70ms），不能占着主线程让界面卡半秒
     @discardableResult
     static func apply(brightness: Double, contrast: Double, on displayID: CGDirectDisplayID) -> Bool {
-        let b = setBrightness(brightness, on: displayID)
-        let c = supportsContrast(displayID) ? setContrast(contrast, on: displayID) : true
-        return b && c
+        let b = min(max(brightness, 5), 100)
+        let c = min(max(contrast, 0), 100)
+        let supported = isSupported(displayID)
+        UserDefaults.standard.set(b / 100, forKey: brightnessKey(displayID))
+        if supportsContrast(displayID) {
+            UserDefaults.standard.set(c, forKey: contrastKey(displayID))
+        }
+        DispatchQueue.global(qos: .userInitiated).async {
+            _ = hardwareBrightness(b, on: displayID)
+            if supportsContrast(displayID) {
+                _ = hardwareContrast(c, on: displayID)
+            }
+        }
+        return supported
+    }
+
+    // MARK: - 硬件写入（只说话，不记账；记账由调用方先行完成）
+
+    private static func hardwareBrightness(_ clamped: Double, on displayID: CGDirectDisplayID) -> Bool {
+        if let endpoint = endpoint(for: displayID) {
+            return DDCTransport.shared?.write(endpoint, command: .brightness, percent: clamped / 100) ?? false
+        }
+        if let service = ioService(for: displayID) {
+            IODisplaySetFloatParameter(service, 0, kIODisplayBrightnessKey as CFString,
+                                       Float32(clamped / 100))
+            IOObjectRelease(service)
+            return true
+        }
+        return false
+    }
+
+    private static func hardwareContrast(_ clamped: Double, on displayID: CGDirectDisplayID) -> Bool {
+        guard let endpoint = endpoint(for: displayID) else { return false }
+        return DDCTransport.shared?.write(endpoint, command: .contrast, percent: clamped / 100) ?? false
     }
 }

@@ -71,7 +71,7 @@
 "settings.scene.conflict" = "Dieses Kürzel ist bereits belegt. Versuche ein anderes.";
 "menu.scene.update" = "„%@“ mit aktuellen Werten aktualisieren";
 "menu.scene.saveNew" = "Als neue Szene sichern…";
-"menu.scene.restore" = "Integrierte Szenen zurücksetzen";
+"menu.scene.restore" = "Auf Standard zurücksetzen";
 "scene.daily" = "Standard";
 "scene.cinema" = "Kino";
 "scene.text" = "Text";
@@ -85,8 +85,8 @@
 "scene.new.message" = "Speichert Helligkeit und Kontrast als benannte Szene.";
 "scene.new.placeholder" = "Szenenname";
 "scene.rename.title" = "Szene umbenennen";
-"scene.restore.title" = "Integrierte Szenen zurücksetzen?";
-"scene.restore.message" = "Nur die 5 integrierten Szenen werden zurückgesetzt. Eigene Szenen bleiben erhalten.";
+"scene.restore.title" = "Auf Standard zurücksetzen?";
+"scene.restore.message" = "Nur die 5 Standardszenen werden zurückgesetzt. Eigene Szenen bleiben erhalten.";
 "scene.restore.action" = "Zurücksetzen";
 "common.ok" = "OK";
 "common.cancel" = "Abbrechen";

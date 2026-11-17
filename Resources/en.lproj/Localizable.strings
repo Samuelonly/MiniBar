@@ -71,7 +71,7 @@
 "settings.scene.conflict" = "That shortcut is already taken. Try another one.";
 "menu.scene.update" = "Update “%@” with current values";
 "menu.scene.saveNew" = "Save as new scene…";
-"menu.scene.restore" = "Restore built-in scenes";
+"menu.scene.restore" = "Restore defaults";
 "scene.daily" = "Daily";
 "scene.cinema" = "Cinema";
 "scene.text" = "Text";
@@ -85,8 +85,8 @@
 "scene.new.message" = "Saves the current brightness and contrast as a named scene.";
 "scene.new.placeholder" = "Scene name";
 "scene.rename.title" = "Rename scene";
-"scene.restore.title" = "Restore built-in scenes?";
-"scene.restore.message" = "Only the 5 built-in scenes are reset. Your own scenes stay untouched.";
+"scene.restore.title" = "Restore defaults?";
+"scene.restore.message" = "Only the 5 default scenes are restored. Your own scenes stay untouched.";
 "scene.restore.action" = "Restore";
 "common.ok" = "OK";
 "common.cancel" = "Cancel";

@@ -15,8 +15,8 @@ final class SettingsPanel: NSPanel {
     private var shownAt = Date.distantPast
 
     init() {
-        // 窗口尺寸 = 内容实测尺寸。宽度固定 380，高度取换行后的自然高度，
-        // 以后加功能窗口自己长，不写死。
+        // 窗口尺寸 = 内容实测尺寸（不额外垫透明 title bar 条——那是多余的"狗皮膏药"层）。
+        // 顶部拖拽由标题行手势承担，见 SettingsContent 顶部
         let probe = NSHostingView(rootView: SettingsContent(onClose: {}))
         probe.translatesAutoresizingMaskIntoConstraints = false
         probe.widthAnchor.constraint(equalToConstant: SettingsPanel.width).isActive = true
@@ -27,9 +27,11 @@ final class SettingsPanel: NSPanel {
         super.init(contentRect: NSRect(x: 0, y: 0,
                                         width: SettingsPanel.width,
                                         height: contentH),
-                   // borderless：无 title bar 安全区；关闭走自绘 ✕
+                   // borderless：无系统 title bar，顶部即内容（与主面板同构）
                    styleMask: [.borderless],
                    backing: .buffered, defer: false)
+
+        isMovableByWindowBackground = true
 
         // 窗口透明，背景/圆角由 AppKit 容器图层画
         isOpaque = false
@@ -61,18 +63,13 @@ final class SettingsPanel: NSPanel {
         container.layer?.borderColor = PanelAppearance.current.borderNS.cgColor
 
         let host = FirstMouseHostingView(rootView: SettingsContent(onClose: { [weak self] in self?.close() }))
-        // 必须关掉 sizingOptions：默认行为会让 hosting view 用 intrinsic 尺寸反向改窗口，
-        // 与固定的 contentRect 冲突后内容被压成 0（窗口 visible 却什么都不画）
         host.sizingOptions = []
-        // NSHostingView 不继承窗口的 appearance，必须单独指定，与皮肤一致
         host.appearance = PanelAppearance.current.nsAppearance
-        host.frame = container.bounds
+        host.frame = NSRect(x: 0, y: 0, width: SettingsPanel.width, height: contentH)
         host.autoresizingMask = [.width, .height]
         container.addSubview(host)
         contentView = container
         center()
-        // 拖空白处即可移动（borderless 窗口默认不可拖）
-        isMovableByWindowBackground = true
 
         // 手动换肤 → 立即重绘；系统深浅色变化 → 未手动时跟随（applySkin 内部判断）
         skinObserver = NotificationCenter.default.addObserver(
@@ -93,11 +90,30 @@ final class SettingsPanel: NSPanel {
                   Date().timeIntervalSince(self.shownAt) > 0.2 else { return }
             if !self.frame.contains(NSEvent.mouseLocation) { self.close() }
         }
-        // 本地：本 App 内（主面板）的点击
-        localClickMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] event in
-            guard let self, self.isVisible, !HotkeyRecorder.isActive,
+        // 本地：本 App 内的点击。判定一律用事件自带的窗口与坐标——
+        // NSEvent.mouseLocation 在合成/快速连点里可能滞后，会把"点自己"误判成"点在外面"
+        localClickMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] event in
+            guard let self, self.isVisible,
                   Date().timeIntervalSince(self.shownAt) > 0.2 else { return event }
-            if !self.frame.contains(NSEvent.mouseLocation) { self.close() }
+            // 录制窗开着：本 App 内点在录制窗外 = 取消录制并吞掉这一下（popover 语义）。
+            // 必须在设置面板自己的"点外关闭"之前裁判，否则同一次点击会把两个窗口一起关掉
+            if HotkeyRecorder.isActive {
+                if let recorder = HotkeyRecorder.panelWindow, event.window !== recorder {
+                    HotkeyRecorder.cancelFromOutsideClick()
+                    return nil
+                }
+                return event
+            }
+            // 常规：点在本面板窗口之外 → 关闭
+            guard event.window !== self else { return event }
+            if let win = event.window {
+                let p = event.locationInWindow
+                let screen = NSPoint(x: win.frame.origin.x + p.x,
+                                     y: win.frame.origin.y + p.y)
+                if !self.frame.contains(screen) { self.close() }
+            }
             return event
         }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
@@ -236,21 +252,34 @@ final class HotkeyRecorderPanel: NSPanel {
 enum HotkeyRecorder {
     enum Outcome { case set(HotkeyBinding), clear, cancel }
 
-    /// 录制期间设置面板的「点外部 / Esc 关闭」要先让路
+    /// 录制期间设置面板的「点外部 / Esc 关闭」要让路
     private(set) static var isActive = false
     private static var controller: RecorderController?
+
+    /// 录制窗本体（设置面板的事件监听用它判断点击是否落在录制窗外）
+    static var panelWindow: NSWindow? { controller?.panelWindow }
+
+    /// 本 App 内点击录制窗外 = 取消（popover 语义；由设置面板的本地监听统一调用）
+    static func cancelFromOutsideClick() {
+        controller?.cancelFromOutsideClick()
+    }
 
     static func present(actionName: String, current: HotkeyBinding?,
                         hostFrame: NSRect?,
                         completion: @escaping (Outcome) -> Void) {
-        let controller = RecorderController(actionName: actionName, current: current,
-                                            hostFrame: hostFrame)
-        self.controller = controller
+        let recorder = RecorderController(actionName: actionName, current: current,
+                                          hostFrame: hostFrame)
+        self.controller = recorder
         isActive = true
-        controller.begin { outcome in
-            HotkeyRecorder.isActive = false
-            HotkeyRecorder.controller = nil
+        recorder.begin { outcome in
             completion(outcome)
+            // isActive 延迟到下一个 runloop 再清：事件监听按安装逆序执行，
+            // 录制窗的监听先跑、设置面板的同发监听后跑——立刻清 false 的话，
+            // 后跑的那发会把"录制中"误判成"已结束"，把设置面板连坐关掉
+            DispatchQueue.main.async {
+                isActive = false
+                controller = nil
+            }
         }
     }
 }
@@ -269,8 +298,8 @@ private final class RecorderController: NSObject {
         super.init()
         panel.title = String(format: L("settings.scene.record"), actionName)
         panel.isReleasedWhenClosed = false
-        // 设置面板在 statusBar 层级，录制窗必须同层才能浮在它上面
-        panel.level = .statusBar
+        // 设置面板在 statusBar 层级，录制窗必须比它高一层才不会被盖住
+        panel.level = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
         panel.hidesOnDeactivate = false
 
         let stack = NSStackView(frame: NSRect(x: 0, y: 0, width: 340, height: 132))
@@ -306,7 +335,8 @@ private final class RecorderController: NSObject {
     /// 异步 non-modal：不用 runModal（它会阻塞主线程，在 SwiftUI Button 回调里调用等于死锁）
     func begin(completion: @escaping (HotkeyRecorder.Outcome) -> Void) {
         self.completion = completion
-        panel.level = .statusBar
+        // 确保层级比 SettingsPanel 高，不会被盖住
+        panel.level = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
         panel.hidesOnDeactivate = false
         // 相对于 SettingsPanel 居中（不是屏幕中心）
         if let hostFrame {
@@ -324,7 +354,9 @@ private final class RecorderController: NSObject {
             guard let self else { return event }
             return self.handle(event) ? nil : event
         }
-        // 点面板外部也视为取消
+        // 其它 App 里的点击走全局监听；本 App 内的点击由设置面板的本地监听统一裁判
+        //（见 SettingsPanel.installDismissMonitors——那里拿得到事件窗口，判定更准，
+        //  也避免两套监听对同一发事件各判一次、把设置面板连坐关掉）
         clickMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown]
         ) { [weak self] _ in
@@ -337,6 +369,10 @@ private final class RecorderController: NSObject {
 
     private var completion: ((HotkeyRecorder.Outcome) -> Void)?
     private var clickMonitor: Any?
+
+    /// 供 HotkeyRecorder 面板判断/取消使用
+    var panelWindow: NSWindow { panel }
+    func cancelFromOutsideClick() { finish(.cancel) }
 
     /// 只接受「修饰键 + 一个普通键」；纯修饰键不会产生 keyDown
     private func handle(_ event: NSEvent) -> Bool {
@@ -381,6 +417,8 @@ struct SettingsContent: View {
     @State private var appeared = false
     /// 场景增删改 / 改键后刷新列表
     @State private var revision = 0
+    /// 标题行拖拽：按下时的窗口原点（手势位移要加回起点，手势结束清空）
+    @State private var dragStartOrigin: NSPoint?
 
     private var store: SceneStore { SceneStore.shared }
 
@@ -505,7 +543,9 @@ struct SettingsContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // 标题行：borderless 面板无系统红 X，关闭走「点外部 / Esc」
+            // 标题行：按住即拖动窗口。手势位移是相对按下点的总位移，
+            // 必须加回"按下时的窗口原点"；直接加到"当前 origin"上窗口会越拖越飘。
+            // 上边距并入手柄：整个顶部横条都能抓
             HStack(alignment: .top) {
                 Text(L("settings.title"))
                     .font(.system(size: 11, weight: .semibold, design: .monospaced))
@@ -513,7 +553,21 @@ struct SettingsContent: View {
                     .foregroundStyle(.secondary)
                 Spacer()
             }
+            .padding(.top, 28)
             .padding(.bottom, 2)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        guard let panel = NSApp.windows.first(where: { $0 is SettingsPanel }) else { return }
+                        if dragStartOrigin == nil { dragStartOrigin = panel.frame.origin }
+                        guard let start = dragStartOrigin else { return }
+                        panel.setFrameOrigin(NSPoint(
+                            x: start.x + value.translation.width,
+                            y: start.y - value.translation.height))
+                    }
+                    .onEnded { _ in dragStartOrigin = nil }
+            )
             Divider()
 
             // PRD §10 文案纪律：功能说明置顶，用户语言，两行
@@ -597,7 +651,6 @@ struct SettingsContent: View {
         }
         // HTML：.panel{padding:10px} + .mod-row/.p-note{padding:6px} = 16
         .padding(.horizontal, 16)
-        .padding(.top, 28)
         .padding(.bottom, 20)
         // 宽度固定 380，高度由内容决定（窗口尺寸 = 这里的尺寸）
         .frame(width: SettingsPanel.width, alignment: .leading)

@@ -71,7 +71,7 @@
 "settings.scene.conflict" = "Questa scorciatoia è già in uso. Provane un'altra.";
 "menu.scene.update" = "Aggiorna «%@» con i valori attuali";
 "menu.scene.saveNew" = "Salva come nuova scena…";
-"menu.scene.restore" = "Ripristina scene integrate";
+"menu.scene.restore" = "Ripristina impostazioni predefinite";
 "scene.daily" = "Quotidiano";
 "scene.cinema" = "Cinema";
 "scene.text" = "Testo";
@@ -85,8 +85,8 @@
 "scene.new.message" = "Salva luminosità e contrasto attuali come scena con nome.";
 "scene.new.placeholder" = "Nome scena";
 "scene.rename.title" = "Rinomina scena";
-"scene.restore.title" = "Ripristinare le scene integrate?";
-"scene.restore.message" = "Vengono reimpostate solo le 5 scene integrate. Le tue scene restano invariate.";
+"scene.restore.title" = "Ripristinare le impostazioni predefinite?";
+"scene.restore.message" = "Vengono ripristinate solo le 5 scene predefinite. Le tue scene restano invariate.";
 "scene.restore.action" = "Ripristina";
 "common.ok" = "OK";
 "common.cancel" = "Annulla";

@@ -71,7 +71,7 @@
 "settings.scene.conflict" = "このショートカットは使用されています。別のキーを試してください。";
 "menu.scene.update" = "「%@」を現在値で更新";
 "menu.scene.saveNew" = "新しいシーンとして保存…";
-"menu.scene.restore" = "内蔵シーンを復元";
+"menu.scene.restore" = "デフォルトに戻す";
 "scene.daily" = "標準";
 "scene.cinema" = "シネマ";
 "scene.text" = "テキスト";
@@ -85,8 +85,8 @@
 "scene.new.message" = "現在の明るさとコントラストを名前付きシーンとして保存します。";
 "scene.new.placeholder" = "シーン名";
 "scene.rename.title" = "シーンの名前を変更";
-"scene.restore.title" = "内蔵シーンを復元しますか？";
-"scene.restore.message" = "5 つの内蔵シーンのみリセットされます。自作のシーンは変更されません。";
+"scene.restore.title" = "デフォルトに戻しますか？";
+"scene.restore.message" = "5 つのデフォルトシーンのみ復元されます。自作のシーンは変更されません。";
 "scene.restore.action" = "復元";
 "common.ok" = "OK";
 "common.cancel" = "キャンセル";

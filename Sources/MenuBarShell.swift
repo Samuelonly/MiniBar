@@ -126,6 +126,12 @@ final class MenuBarShell: NSObject {
         let count = min(oldItems.count, newItems.count)
         for i in 0..<count {
             if let oldView = oldItems[i].view, oldItems[i].title.isEmpty {
+                // 搬旧壳之前，先把新滑杆按账本算出的值灌回旧壳：
+                // 场景/热键写入后账本已是新值，不灌的话旧壳停在切换前的数
+                if let oldSlider = oldView as? SliderRowView,
+                   let newSlider = newItems[i].view as? SliderRowView {
+                    oldSlider.setSliderValue(newSlider.sliderValue)
+                }
                 newItems[i].view = oldView
             }
         }

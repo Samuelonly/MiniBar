@@ -70,8 +70,8 @@
 "settings.scene.clear" = "清除";
 "settings.scene.conflict" = "这个快捷键已被占用，换一个试试。";
 "menu.scene.update" = "用当前值更新「%@」";
-"menu.scene.saveNew" = "存为新场景…";
-"menu.scene.restore" = "恢复内置场景";
+"menu.scene.saveNew" = "保存为新场景…";
+"menu.scene.restore" = "恢复默认";
 "scene.daily" = "日常";
 "scene.cinema" = "影像";
 "scene.text" = "文稿";
@@ -85,8 +85,8 @@
 "scene.new.message" = "把当前亮度和对比度存成一个命名场景。";
 "scene.new.placeholder" = "场景名称";
 "scene.rename.title" = "重命名场景";
-"scene.restore.title" = "恢复内置场景？";
-"scene.restore.message" = "只复位 5 个内置场景，你自己建的场景不受影响。";
+"scene.restore.title" = "恢复默认？";
+"scene.restore.message" = "只恢复 5 个默认场景，你自己建的场景不受影响。";
 "scene.restore.action" = "恢复";
 "common.ok" = "确定";
 "common.cancel" = "取消";

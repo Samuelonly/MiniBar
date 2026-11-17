@@ -219,6 +219,8 @@ final class HUDMenuPanel: NSPanel {
         contentHeightValue = natural
 
         host.rootView = makeContent(menu: menu, scrollable: scrollable, cap: cap, state: state)
+        // 重建后敲一下 sliderTick：SwiftUI 滑杆行重读 AppKit 真实值（场景写入后滑杆立刻跟账本走）
+        state.sliderTick &+= 1
 
         let height = scrollable ? cap : natural
         guard abs(height - frame.height) > 0.5 else { return }
@@ -681,6 +683,39 @@ private struct HUDMenuContent: View {
                     .foregroundStyle(PanelAppearance.current.label)
                     .frame(minWidth: 26, alignment: .trailing)
             }
+
+            // 自建场景管理菜单（重命名/复制/删除）：内置场景不显示——它们不该被改
+            if let scene, !scene.builtin {
+                Menu {
+                    Button(L("scene.menu.rename")) {
+                        guard let name = SceneDialogs.prompt(
+                            title: L("scene.rename.title"),
+                            message: "",
+                            placeholder: scene.displayName,
+                            defaultText: scene.displayName) else { return }
+                        store.rename(scene, to: name)
+                        NotificationCenter.default.post(name: ModuleEvent.menuRefresh, object: nil)
+                    }
+                    Button(L("scene.menu.duplicate")) {
+                        guard let displayID else { return }
+                        store.duplicate(scene, displayID: displayID)
+                        NotificationCenter.default.post(name: ModuleEvent.menuRefresh, object: nil)
+                    }
+                    Divider()
+                    Button(L("scene.menu.delete"), role: .destructive) {
+                        guard let displayID else { return }
+                        store.delete(scene, displayID: displayID)
+                        NotificationCenter.default.post(name: ModuleEvent.menuRefresh, object: nil)
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(PanelAppearance.current.label)
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+            }
         }
         .padding(.horizontal, HUDMenuPanel.childHInset)
         .frame(height: HUDMenuPanel.childRowHeight)
@@ -705,7 +740,7 @@ private struct HUDMenuContent: View {
             }
             Text(item.title)
                 .font(.system(size: 11))
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(PanelAppearance.current.actionAccent)
                 .lineLimit(1)
             Spacer(minLength: 8)
         }

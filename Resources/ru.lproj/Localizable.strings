@@ -71,7 +71,7 @@
 "settings.scene.conflict" = "Это сочетание уже занято. Попробуйте другое.";
 "menu.scene.update" = "Обновить «%@» текущими значениями";
 "menu.scene.saveNew" = "Сохранить как новую сцену…";
-"menu.scene.restore" = "Восстановить встроенные сцены";
+"menu.scene.restore" = "Восстановить значения по умолчанию";
 "scene.daily" = "Обычная";
 "scene.cinema" = "Кино";
 "scene.text" = "Текст";
@@ -85,8 +85,8 @@
 "scene.new.message" = "Сохраняет текущую яркость и контраст как именованную сцену.";
 "scene.new.placeholder" = "Название сцены";
 "scene.rename.title" = "Переименовать сцену";
-"scene.restore.title" = "Восстановить встроенные сцены?";
-"scene.restore.message" = "Сбрасываются только 5 встроенных сцен. Ваши сцены не затрагиваются.";
+"scene.restore.title" = "Восстановить значения по умолчанию?";
+"scene.restore.message" = "Восстанавливаются только 5 сцен по умолчанию. Ваши сцены не затрагиваются.";
 "scene.restore.action" = "Восстановить";
 "common.ok" = "OK";
 "common.cancel" = "Отмена";

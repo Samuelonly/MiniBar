@@ -44,6 +44,11 @@ final class DDCTransport {
     private let read: Transfer
     private let write: Transfer
     private var maxCache: [CacheKey: UInt16] = [:]
+    /// 枚举+EDID 读要走 i2c（几十 ms），缓存 10s：菜单重建高峰期不再每遍都敲门；
+    /// 插拔显示器最迟 10s 后自然刷新
+    private var endpointCache: [Endpoint]?
+    private var endpointFetchedAt = Date.distantPast
+    private static let endpointTTL: TimeInterval = 10
 
     private struct CacheKey: Hashable {
         let service: ObjectIdentifier
@@ -64,6 +69,9 @@ final class DDCTransport {
     /// "External"; each must yield a valid EDID, which becomes its identity.
     func endpoints() -> [Endpoint] {
         return queue.sync {
+            if let cached = endpointCache, Date().timeIntervalSince(endpointFetchedAt) < Self.endpointTTL {
+                return cached
+            }
             var iterator: io_iterator_t = 0
             guard IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching("DCPAVServiceProxy"), &iterator) == KERN_SUCCESS else { return [] }
             defer { IOObjectRelease(iterator) }
@@ -92,6 +100,8 @@ final class DDCTransport {
                 }
                 result.append(Endpoint(service: service, chip: chip, identity: identity))
             }
+            endpointCache = result
+            endpointFetchedAt = Date()
             return result
         }
     }
