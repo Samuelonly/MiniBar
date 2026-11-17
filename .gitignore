@@ -3,3 +3,11 @@ build2/
 .DS_Store
 mockups/
 tools/
+
+# 内部开发文档（不公开）
+HANDOFF*.md
+"hand off.md"
+TAILORING.md
+
+# 竞品源码参考（不公开）
+references/
