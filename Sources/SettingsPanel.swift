@@ -241,24 +241,29 @@ enum HotkeyRecorder {
     private static var controller: RecorderController?
 
     static func present(actionName: String, current: HotkeyBinding?,
+                        hostFrame: NSRect?,
                         completion: @escaping (Outcome) -> Void) {
-        let controller = RecorderController(actionName: actionName, current: current)
+        let controller = RecorderController(actionName: actionName, current: current,
+                                            hostFrame: hostFrame)
         self.controller = controller
         isActive = true
-        let outcome = controller.run()
-        isActive = false
-        self.controller = nil
-        if let outcome { completion(outcome) }
+        controller.begin { [weak self] outcome in
+            self?.isActive = false
+            self?.controller = nil
+            completion(outcome)
+        }
     }
 }
 
 private final class RecorderController: NSObject {
     private let panel: HotkeyRecorderPanel
+    private let hostFrame: NSRect?
     private var monitor: Any?
     private var finished = false
     private var outcome: HotkeyRecorder.Outcome?
 
-    init(actionName: String, current: HotkeyBinding?) {
+    init(actionName: String, current: HotkeyBinding?, hostFrame: NSRect?) {
+        self.hostFrame = hostFrame
         panel = HotkeyRecorderPanel(contentRect: NSRect(x: 0, y: 0, width: 340, height: 132),
                                     styleMask: [.titled], backing: .buffered, defer: false)
         super.init()
@@ -298,28 +303,40 @@ private final class RecorderController: NSObject {
         panel.contentView = stack
     }
 
-    func run() -> HotkeyRecorder.Outcome? {
-        panel.center()
-        NSApp.activate(ignoringOtherApps: true)
-        panel.makeKeyAndOrderFront(nil)
+    /// 异步 non-modal：不用 runModal（它会阻塞主线程，在 SwiftUI Button 回调里调用等于死锁）
+    func begin(completion: @escaping (HotkeyRecorder.Outcome) -> Void) {
+        self.completion = completion
+        panel.level = .statusBar
+        panel.hidesOnDeactivate = false
+        // 相对于 SettingsPanel 居中（不是屏幕中心）
+        if let hostFrame {
+            let x = hostFrame.midX - panel.frame.width / 2
+            let y = hostFrame.midY - panel.frame.height / 2
+            panel.setFrameOrigin(NSPoint(x: max(20, x), y: max(20, y)))
+        } else {
+            panel.center()
+        }
+        panel.orderFrontRegardless()
+        panel.makeKey()
+        // 录制期间让出全局热键，否则按下已注册的组合会被热键直接吞掉
+        SceneStore.shared.suspendHotkeys()
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return event }
             return self.handle(event) ? nil : event
         }
-        // runModal 会把窗口层级压回 modalPanel(8)，排到设置面板(25)后面；进入模态循环后再抬回来
-        DispatchQueue.main.async { [weak panel] in
-            panel?.level = .statusBar
-            panel?.orderFrontRegardless()
-            panel?.makeKey()
+        // 点面板外部也视为取消
+        clickMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] _ in
+            guard let self, !self.finished else { return }
+            if !self.panel.frame.contains(NSEvent.mouseLocation) {
+                self.finish(.cancel)
+            }
         }
-        // 录制期间让出全局热键，否则按下已注册的组合会被热键直接吞掉
-        SceneStore.shared.suspendHotkeys()
-        NSApp.runModal(for: panel)
-        SceneStore.shared.resumeHotkeys()
-        if let monitor { NSEvent.removeMonitor(monitor) }
-        monitor = nil
-        return outcome
     }
+
+    private var completion: ((HotkeyRecorder.Outcome) -> Void)?
+    private var clickMonitor: Any?
 
     /// 只接受「修饰键 + 一个普通键」；纯修饰键不会产生 keyDown
     private func handle(_ event: NSEvent) -> Bool {
@@ -336,9 +353,13 @@ private final class RecorderController: NSObject {
         outcome = result
         if let monitor { NSEvent.removeMonitor(monitor) }
         monitor = nil
-        NSApp.stopModal()
+        if let clickMonitor { NSEvent.removeMonitor(clickMonitor) }
+        clickMonitor = nil
+        SceneStore.shared.resumeHotkeys()
         panel.orderOut(nil)
         panel.close()
+        completion?(result)
+        completion = nil
     }
 
     @objc private func clearTapped() { finish(.clear) }
@@ -378,7 +399,9 @@ struct SettingsContent: View {
 
     private func record(name: String, current: HotkeyBinding?,
                         update: @escaping (HotkeyBinding?) -> SceneStore.BindingResult) {
-        HotkeyRecorder.present(actionName: name, current: current) { outcome in
+        let hostFrame = NSApp.windows.first(where: { $0 is SettingsPanel })?.frame
+        HotkeyRecorder.present(actionName: name, current: current,
+                               hostFrame: hostFrame) { outcome in
             switch outcome {
             case .cancel:
                 break

@@ -65,7 +65,7 @@
 "hotkey.contrastUp" = "Aumenta contrasto";
 "hotkey.contrastDown" = "Riduci contrasto";
 "settings.scene.record" = "Scorciatoia per «%@»";
-"settings.scene.recording" = "Premi la nuova scorciatoia (Esc per annullare). Attuale: %@";
+"settings.scene.recording" = "Premi la nuova scorciatoia Attuale: %@";
 "settings.scene.unset" = "Non impostata";
 "settings.scene.clear" = "Cancella";
 "settings.scene.conflict" = "Questa scorciatoia è già in uso. Provane un'altra.";

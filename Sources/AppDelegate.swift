@@ -18,6 +18,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // —— 首次启动 / 老版本升级：补全所有模块开关 key，防止面板空白 ——
+        let defaults = UserDefaults.standard
+        for key in ["module.display", "module.state", "module.power", "module.audio", "module.storage"] {
+            if defaults.object(forKey: key) == nil {
+                defaults.set(true, forKey: key)
+            }
+        }
+
         shell.install()
         NotificationCenter.default.addObserver(
             self, selector: #selector(modulesChanged),

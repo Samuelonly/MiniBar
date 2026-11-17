@@ -65,7 +65,7 @@
 "hotkey.contrastUp" = "Contrast Up";
 "hotkey.contrastDown" = "Contrast Down";
 "settings.scene.record" = "Shortcut for “%@”";
-"settings.scene.recording" = "Press a new shortcut (Esc to cancel). Current: %@";
+"settings.scene.recording" = "Press a new shortcut Current: %@";
 "settings.scene.unset" = "Not set";
 "settings.scene.clear" = "Clear";
 "settings.scene.conflict" = "That shortcut is already taken. Try another one.";

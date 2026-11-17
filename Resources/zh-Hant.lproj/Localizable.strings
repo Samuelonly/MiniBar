@@ -65,7 +65,7 @@
 "hotkey.contrastUp" = "對比度增加";
 "hotkey.contrastDown" = "對比度降低";
 "settings.scene.record" = "「%@」的快速鍵";
-"settings.scene.recording" = "按下新的快速鍵（Esc 取消）。目前：%@";
+"settings.scene.recording" = "按下新的快速鍵。目前：%@";
 "settings.scene.unset" = "未設定";
 "settings.scene.clear" = "清除";
 "settings.scene.conflict" = "這個快速鍵已被占用，換一個試試。";

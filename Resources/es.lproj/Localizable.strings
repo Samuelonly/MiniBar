@@ -65,7 +65,7 @@
 "hotkey.contrastUp" = "Aumentar contraste";
 "hotkey.contrastDown" = "Reducir contraste";
 "settings.scene.record" = "Atajo para «%@»";
-"settings.scene.recording" = "Pulsa el nuevo atajo (Esc para cancelar). Actual: %@";
+"settings.scene.recording" = "Pulsa el nuevo atajo Actual: %@";
 "settings.scene.unset" = "Sin asignar";
 "settings.scene.clear" = "Borrar";
 "settings.scene.conflict" = "Ese atajo ya está en uso. Prueba con otro.";

@@ -65,7 +65,7 @@
 "hotkey.contrastUp" = "Augmenter le contraste";
 "hotkey.contrastDown" = "Réduire le contraste";
 "settings.scene.record" = "Raccourci pour « %@ »";
-"settings.scene.recording" = "Appuyez sur le nouveau raccourci (Échap pour annuler). Actuel : %@";
+"settings.scene.recording" = "Appuyez sur le nouveau raccourci Actuel : %@";
 "settings.scene.unset" = "Non défini";
 "settings.scene.clear" = "Effacer";
 "settings.scene.conflict" = "Ce raccourci est déjà utilisé. Essayez-en un autre.";

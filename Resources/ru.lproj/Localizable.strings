@@ -65,7 +65,7 @@
 "hotkey.contrastUp" = "Увеличить контраст";
 "hotkey.contrastDown" = "Уменьшить контраст";
 "settings.scene.record" = "Сочетание для «%@»";
-"settings.scene.recording" = "Нажмите новое сочетание (Esc — отмена). Сейчас: %@";
+"settings.scene.recording" = "Нажмите новое сочетание Сейчас: %@";
 "settings.scene.unset" = "Не задано";
 "settings.scene.clear" = "Очистить";
 "settings.scene.conflict" = "Это сочетание уже занято. Попробуйте другое.";

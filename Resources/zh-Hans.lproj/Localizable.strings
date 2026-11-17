@@ -65,7 +65,7 @@
 "hotkey.contrastUp" = "对比度增加";
 "hotkey.contrastDown" = "对比度降低";
 "settings.scene.record" = "「%@」的快捷键";
-"settings.scene.recording" = "按下新的快捷键（Esc 取消）。当前：%@";
+"settings.scene.recording" = "按下新的快捷键。当前：%@";
 "settings.scene.unset" = "未设置";
 "settings.scene.clear" = "清除";
 "settings.scene.conflict" = "这个快捷键已被占用，换一个试试。";

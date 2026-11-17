@@ -65,7 +65,7 @@
 "hotkey.contrastUp" = "대비 높이기";
 "hotkey.contrastDown" = "대비 낮추기";
 "settings.scene.record" = "「%@」의 단축키";
-"settings.scene.recording" = "새 단축키를 누르세요 (Esc 취소). 현재: %@";
+"settings.scene.recording" = "새 단축키를 누르세요 현재: %@";
 "settings.scene.unset" = "설정 안 함";
 "settings.scene.clear" = "지우기";
 "settings.scene.conflict" = "이 단축키는 이미 사용 중입니다. 다른 키를 사용하세요.";

@@ -65,7 +65,7 @@
 "hotkey.contrastUp" = "Kontrast erhöhen";
 "hotkey.contrastDown" = "Kontrast verringern";
 "settings.scene.record" = "Kürzel für „%@“";
-"settings.scene.recording" = "Neues Kürzel drücken (Esc zum Abbrechen). Aktuell: %@";
+"settings.scene.recording" = "Neues Kürzel drücken Aktuell: %@";
 "settings.scene.unset" = "Nicht belegt";
 "settings.scene.clear" = "Löschen";
 "settings.scene.conflict" = "Dieses Kürzel ist bereits belegt. Versuche ein anderes.";

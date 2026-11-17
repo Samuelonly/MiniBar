@@ -65,7 +65,7 @@
 "hotkey.contrastUp" = "コントラストを上げる";
 "hotkey.contrastDown" = "コントラストを下げる";
 "settings.scene.record" = "「%@」のショートカット";
-"settings.scene.recording" = "新しいショートカットを押してください（Esc でキャンセル）。現在：%@";
+"settings.scene.recording" = "新しいショートカットを押してください。現在：%@";
 "settings.scene.unset" = "未設定";
 "settings.scene.clear" = "クリア";
 "settings.scene.conflict" = "このショートカットは使用されています。別のキーを試してください。";
