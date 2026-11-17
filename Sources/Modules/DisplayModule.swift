@@ -6,7 +6,7 @@ import IOKit.graphics
 /// 显示控制模块（PRD §3.1，最高频）
 /// 多屏架构：**每个屏幕一个 Block**（Block 头 = 屏幕名），亮度/对比度按屏绑定、按屏缓存，
 /// 外接屏走 DDC、内置屏走 IOKit——MacBook + N 个外接屏 = N 个独立 Block。
-/// 画质模式（0x14）随鼠标所在屏路由。
+/// 场景随鼠标所在屏路由。
 final class DisplayModule: NSObject, MiniBarModule {
     var name: String { "display" }
 
@@ -14,10 +14,9 @@ final class DisplayModule: NSObject, MiniBarModule {
     private var ddcEndpoints: [DDCTransport.Endpoint] = []
 
     func activate() {
-        // 提前初始化场景仓库：注册 ⌃⌥1–5 全局热键、写入默认场景。
+        // 提前初始化场景仓库：恢复用户主动绑定的全局热键、写入默认场景。
         // 不能等到第一次开面板才初始化，否则冷启动时热键是死的。
         _ = SceneStore.shared
-        refreshPictureMode()
     }
 
     func deactivate() {
@@ -85,44 +84,130 @@ final class DisplayModule: NSObject, MiniBarModule {
         NotificationCenter.default.post(name: .minibarDisplayValueChanged, object: nil)
     }
 
-    // MARK: - 画质模式（VCP 0x14，随鼠标所在屏路由）
+    // MARK: - 场景（随鼠标所在屏路由）
 
-    private func refreshPictureMode() {
-        DispatchQueue.global(qos: .utility).async {
-            guard let endpoints = DDCTransport.shared?.endpoints() else { return }
-            for endpoint in endpoints {
-                if let reading = DDCTransport.shared?.read(endpoint, command: .pictureMode) {
-                    UserDefaults.standard.set(Int(reading.current), forKey: "display.pictureMode")
-                    UserDefaults.standard.set(Int(reading.max), forKey: "display.pictureModeMax")
-                }
+    /// 场景应用：submenu 里点场景 → apply + 重建菜单让滑杆跟值
+    @objc private func applySceneFromPictureMode(_ sender: NSMenuItem) {
+        guard let sceneID = sender.representedObject as? String,
+              let scene = SceneStore.shared.scenes.first(where: { $0.id == sceneID }),
+              let screen = currentScreen(),
+              let displayID = displayID(screen) else { return }
+
+        // dirty 场景切换：先问保存 / 丢弃 / 取消
+        if SceneStore.shared.isDirty(displayID: displayID),
+           let currentID = SceneStore.shared.activeSceneID(for: displayID),
+           currentID != scene.id,
+           let currentName = SceneStore.shared.scenes.first(where: { $0.id == currentID })?.displayName {
+            switch SceneDialogs.switchChoice(sceneName: currentName) {
+            case .save:
+                SceneStore.shared.updateActiveWithCurrent(displayID: displayID)
+            case .discard:
+                break
+            case .cancel:
+                return
             }
         }
-    }
 
-    /// 画质模式切换：写 0x14 原始档位值（精确写入，不做百分比换算）
-    @objc private func setPictureMode(_ sender: NSMenuItem) {
-        guard let value = sender.representedObject as? Int else { return }
-        guard let screen = currentScreen(), let endpoint = ddcEndpoint(for: screen) else { return }
-        if ddc?.writeRaw(endpoint, command: .pictureMode, raw: UInt16(value)) == true {
-            UserDefaults.standard.set(value, forKey: "display.pictureMode")
-            sender.state = .on
+        _ = SceneStore.shared.apply(scene, on: displayID)
+        if !DisplayPort.isSupported(displayID) {
+            SceneDialogs.info(L("scene.apply.failed"))
         }
+        NotificationCenter.default.post(name: ModuleEvent.menuRefresh, object: nil)
     }
 
-    private func pictureModeMenu() -> NSMenu {
+    /// dirty 时：用当前滑杆值覆盖激活场景
+    @objc private func updateSceneFromPictureMode(_ sender: NSMenuItem) {
+        guard let sceneID = sender.representedObject as? String,
+              let screen = currentScreen(),
+              let displayID = displayID(screen) else { return }
+        SceneStore.shared.updateActiveWithCurrent(displayID: displayID)
+        NotificationCenter.default.post(name: ModuleEvent.menuRefresh, object: nil)
+    }
+
+    /// 存为新场景
+    @objc private func saveSceneFromPictureMode(_ sender: NSMenuItem) {
+        guard let screen = currentScreen(), let displayID = displayID(screen),
+              let name = SceneDialogs.prompt(
+                title: L("scene.new.title"),
+                message: L("scene.new.message"),
+                placeholder: L("scene.new.placeholder")) else { return }
+        SceneStore.shared.addScene(name: name, displayID: displayID)
+        NotificationCenter.default.post(name: ModuleEvent.menuRefresh, object: nil)
+    }
+
+    /// 恢复内置场景
+    @objc private func restoreScenesFromPictureMode(_ sender: NSMenuItem) {
+        guard SceneDialogs.confirm(title: L("scene.restore.title"),
+                                   message: L("scene.restore.message"),
+                                   action: L("scene.restore.action")) else { return }
+        guard let screen = currentScreen(), let displayID = displayID(screen) else { return }
+        SceneStore.shared.restoreBuiltins(displayID: displayID)
+        NotificationCenter.default.post(name: ModuleEvent.menuRefresh, object: nil)
+    }
+
+    /// 场景 submenu：日常 / 影像 / 文稿 / 夜读 / 暗房（用户要求收这里）
+    private func scenesMenu() -> NSMenu {
         let menu = NSMenu()
         menu.autoenablesItems = false
-        let modeMax = max(UserDefaults.standard.integer(forKey: "display.pictureModeMax"), 11)
-        let currentMode = UserDefaults.standard.integer(forKey: "display.pictureMode")
-        for value in 0...modeMax {
-            let modeItem = menuItem(String(format: L("menu.display.modeItem"), value + 1),
-                                    symbol: "",
-                                    action: #selector(setPictureMode(_:)), target: self,
-                                    state: currentMode == value ? .on : .off,
-                                    rep: value)
-            modeItem.toolTip = "VCP 0x14 = \(value)"
-            menu.addItem(modeItem)
+
+        let store = SceneStore.shared
+        let displayID = currentScreen().flatMap { displayID($0) }
+        let activeID = displayID.flatMap { store.activeSceneID(for: $0) }
+        let dirty = displayID.map { store.isDirty(displayID: $0) } ?? false
+
+        // —— 场景行 ——
+        for scene in store.scenes {
+            let isActive = activeID == scene.id
+            let item = NSMenuItem(title: scene.displayName,
+                                  action: #selector(applySceneFromPictureMode(_:)),
+                                  keyEquivalent: "")
+            item.target = self
+            item.representedObject = scene.id
+            item.identifier = NSUserInterfaceItemIdentifier("minibar.pmSceneRow")
+            item.image = isActive
+                ? NSImage(systemSymbolName: "circle.fill", accessibilityDescription: nil)
+                : nil
+            item.state = isActive ? .on : .off
+            item.tag = Int(isActive && dirty ? 1 : 0)
+            menu.addItem(item)
         }
+
+        // —— dirty 保存 ——
+        if dirty, let activeID,
+           let activeScene = store.scenes.first(where: { $0.id == activeID }) {
+            menu.addItem(NSMenuItem.separator())
+            let item = NSMenuItem(title: String(format: L("menu.scene.update"), activeScene.displayName),
+                                  action: #selector(updateSceneFromPictureMode(_:)),
+                                  keyEquivalent: "")
+            item.target = self
+            item.representedObject = activeID
+            item.identifier = NSUserInterfaceItemIdentifier("minibar.pmSceneDirty")
+            item.image = NSImage(systemSymbolName: "arrow.triangle.2.circlepath",
+                                 accessibilityDescription: nil)
+            menu.addItem(item)
+        }
+
+        // —— 动作行 ——
+        menu.addItem(NSMenuItem.separator())
+        let saveItem = NSMenuItem(title: L("menu.scene.saveNew"),
+                                  action: #selector(saveSceneFromPictureMode(_:)),
+                                  keyEquivalent: "")
+        saveItem.target = self
+        saveItem.identifier = NSUserInterfaceItemIdentifier("minibar.pmSceneSaveNew")
+        saveItem.image = NSImage(systemSymbolName: "plus", accessibilityDescription: nil)
+        menu.addItem(saveItem)
+
+        let restoreItem = NSMenuItem(title: L("menu.scene.restore"),
+                                     action: #selector(restoreScenesFromPictureMode(_:)),
+                                     keyEquivalent: "")
+        restoreItem.target = self
+        restoreItem.identifier = NSUserInterfaceItemIdentifier("minibar.pmSceneRestore")
+        restoreItem.image = NSImage(systemSymbolName: "arrow.2.squarepath",
+                                    accessibilityDescription: nil)
+        menu.addItem(restoreItem)
+
+        // 画质档位 VCP 0x14 已移除 — 用户确认这些硬件档位名对终端用户无意义
+
         return menu
     }
 
@@ -193,16 +278,13 @@ final class DisplayModule: NSObject, MiniBarModule {
             }
         }
 
+        items.append(menuItem(L("menu.display.scenes"), symbol: "paintpalette",
+                              submenu: scenesMenu()))
+
+        // 旋转：独立放在末尾
+        items.append(NSMenuItem.separator())
         items.append(menuItem(L("menu.display.rotation"), symbol: "rotate.right",
                               submenu: rotationMenu()))
-        items.append(menuItem(L("menu.display.pictureMode"), symbol: "paintpalette",
-                              submenu: pictureModeMenu()))
-
-        // 场景：唯一编辑器仍是上面两条滑杆，这里只多 N 行文字
-        items.append(sectionHeader(L("menu.section.scenes")))
-        let sceneBlock = NSMenuItem(title: "", action: nil, keyEquivalent: "")
-        sceneBlock.identifier = NSUserInterfaceItemIdentifier("minibar.sceneBlock")
-        items.append(sceneBlock)
         return items
     }
 }

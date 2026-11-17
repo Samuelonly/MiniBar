@@ -25,6 +25,14 @@ struct Scene: Codable, Identifiable {
     var displayName: String { builtin ? L("scene.\(id)") : name }
 }
 
+/// 与场景数量无关的四个高频调节动作
+enum DisplayAdjustment: String, Codable, CaseIterable {
+    case brightnessUp, brightnessDown, contrastUp, contrastDown
+
+    var displayName: String { L("hotkey.\(rawValue)") }
+    var hotkeyID: String { "adjust.\(rawValue)" }
+}
+
 /// 用户可改的快捷键绑定（设置页录制）
 struct HotkeyBinding: Codable, Equatable {
     var keyCode: UInt16
@@ -76,6 +84,8 @@ final class SceneStore {
     private(set) var active: [String: String] = [:]   // 显示端口 key → 场景 id
     /// 场景 id → 快捷键（用户可在设置里改；缺省即未绑定）
     private(set) var bindings: [String: HotkeyBinding] = [:]
+    /// 四个调节动作有稳定的默认键，不随场景数量变化
+    private(set) var adjustmentBindings: [String: HotkeyBinding] = [:]
 
     /// 内置 5 档：亮度跨度大、对比度跨度小且不同向——反向微调才是预设的价值
     private static let builtinDefaults: [(id: String, b: Double, c: Double)] = [
@@ -86,16 +96,21 @@ final class SceneStore {
         ("darkroom",  8, 30),
     ]
 
-    private static let defaultModifiers: UInt =
-        NSEvent.ModifierFlags.control.rawValue | NSEvent.ModifierFlags.option.rawValue
+    /// 旧版曾默认绑定 ⌃⌥1…5；仅用于升级时识别并撤掉这组非用户主动设置的绑定。
+    private static let legacyDefaultBindings: [String: HotkeyBinding] = [
+        "daily":    HotkeyBinding(keyCode: 18, modifiers: 786_432),
+        "cinema":   HotkeyBinding(keyCode: 19, modifiers: 786_432),
+        "text":     HotkeyBinding(keyCode: 20, modifiers: 786_432),
+        "night":    HotkeyBinding(keyCode: 21, modifiers: 786_432),
+        "darkroom": HotkeyBinding(keyCode: 23, modifiers: 786_432),
+    ]
 
-    /// 默认快捷键 ⌃⌥1…5
-    static let defaultBindings: [String: HotkeyBinding] = [
-        "daily":    HotkeyBinding(keyCode: 18, modifiers: defaultModifiers),
-        "cinema":   HotkeyBinding(keyCode: 19, modifiers: defaultModifiers),
-        "text":     HotkeyBinding(keyCode: 20, modifiers: defaultModifiers),
-        "night":    HotkeyBinding(keyCode: 21, modifiers: defaultModifiers),
-        "darkroom": HotkeyBinding(keyCode: 23, modifiers: defaultModifiers),
+    /// ⌃⌥= / ⌃⌥- / ⌃⌥] / ⌃⌥[
+    private static let defaultAdjustmentBindings: [String: HotkeyBinding] = [
+        DisplayAdjustment.brightnessUp.rawValue:   HotkeyBinding(keyCode: 24, modifiers: 786_432),
+        DisplayAdjustment.brightnessDown.rawValue: HotkeyBinding(keyCode: 27, modifiers: 786_432),
+        DisplayAdjustment.contrastUp.rawValue:     HotkeyBinding(keyCode: 30, modifiers: 786_432),
+        DisplayAdjustment.contrastDown.rawValue:   HotkeyBinding(keyCode: 33, modifiers: 786_432),
     ]
 
     private var fileURL: URL {
@@ -109,6 +124,7 @@ final class SceneStore {
         var scenes: [Scene]
         var active: [String: String]
         var bindings: [String: HotkeyBinding]?
+        var adjustmentBindings: [String: HotkeyBinding]?
     }
 
     private init() {
@@ -125,19 +141,35 @@ final class SceneStore {
         return payload
     }
 
+    private static func migratedBindings(_ stored: [String: HotkeyBinding]?) -> [String: HotkeyBinding] {
+        guard let stored else { return [:] }   // 新装/旧文件：场景默认不启用全局热键
+        // 恰好还是旧版整套默认值的，视为系统预置而非用户选择；有改动则全部尊重
+        return stored == legacyDefaultBindings ? [:] : stored
+    }
+
+    private static func migratedAdjustments(_ stored: [String: HotkeyBinding]?,
+                                            scenes: [String: HotkeyBinding]) -> [String: HotkeyBinding] {
+        if let stored { return stored }   // 空字典也属于用户选择：全部清除后不再补默认键
+        // 老版本升级时补上四个调节键；若与用户已绑定的场景冲突，用户绑定优先
+        return defaultAdjustmentBindings.filter { !scenes.values.contains($0.value) }
+    }
+
     private func load() {
         if let payload = read(fileURL) {
             scenes = payload.scenes
             active = payload.active
-            // 老版本文件没有 bindings → 补默认值；有则尊重用户设置（含「未绑定」）
-            bindings = payload.bindings ?? Self.defaultBindings
+            bindings = Self.migratedBindings(payload.bindings)
+            adjustmentBindings = Self.migratedAdjustments(payload.adjustmentBindings, scenes: bindings)
+            if bindings != payload.bindings || adjustmentBindings != payload.adjustmentBindings { save() }
             return
         }
         // 损坏 → .bak 恢复 → 仍坏则重建
         if let payload = read(fileURL.appendingPathExtension("bak")) {
             scenes = payload.scenes
             active = payload.active
-            bindings = payload.bindings ?? Self.defaultBindings
+            bindings = Self.migratedBindings(payload.bindings)
+            adjustmentBindings = Self.migratedAdjustments(payload.adjustmentBindings, scenes: bindings)
+            if bindings != payload.bindings || adjustmentBindings != payload.adjustmentBindings { save() }
             return
         }
         seedBuiltins()
@@ -145,7 +177,8 @@ final class SceneStore {
     }
 
     private func save() {
-        let payload = Payload(scenes: scenes, active: active, bindings: bindings)
+        let payload = Payload(scenes: scenes, active: active, bindings: bindings,
+                              adjustmentBindings: adjustmentBindings)
         guard let data = try? JSONEncoder().encode(payload) else { return }
         let bak = fileURL.appendingPathExtension("bak")
         try? FileManager.default.removeItem(at: bak)
@@ -158,7 +191,8 @@ final class SceneStore {
             Scene(id: d.id, name: "", builtin: true,
                   values: [Self.valueKey: SceneValues(brightness: d.b, contrast: d.c)])
         }
-        bindings = Self.defaultBindings
+        bindings = [:]   // 场景全局热键按需绑定，不为场景预置
+        adjustmentBindings = Self.defaultAdjustmentBindings
         active = [:]
         // 首次启动：激活「日常」。硬件写入放后台，避免首块面板构建被 DDC 阻塞
         if let displayID = DisplayPort.currentDisplayID() {
@@ -185,24 +219,47 @@ final class SceneStore {
     enum BindingResult { case ok, duplicate, unavailable }
 
     func binding(for scene: Scene) -> HotkeyBinding? { bindings[scene.id] }
+    func binding(for adjustment: DisplayAdjustment) -> HotkeyBinding? {
+        adjustmentBindings[adjustment.rawValue]
+    }
 
     /// 录制期间：临时注销全部热键；结束后按当前表重新注册
     func suspendHotkeys() { HotkeyCenter.shared.suspend() }
     func resumeHotkeys() { refreshHotkeys() }
 
-    /// 重新注册全部快捷键，返回注册失败（被系统/其它 App 占用）的场景 id
+    /// 调节与场景共用一张注册表；返回注册失败的动作 id
     @discardableResult
     private func refreshHotkeys() -> Set<String> {
-        let items: [(id: String, binding: HotkeyBinding)] = scenes.compactMap { scene in
+        var items: [(id: String, binding: HotkeyBinding)] = DisplayAdjustment.allCases.compactMap {
+            guard let binding = adjustmentBindings[$0.rawValue] else { return nil }
+            return ($0.hotkeyID, binding)
+        }
+        items += scenes.compactMap { scene in
             guard let binding = bindings[scene.id] else { return nil }
             return (scene.id, binding)
         }
-        return HotkeyCenter.shared.update(items) { [weak self] sceneID in
-            guard let self,
-                  let scene = self.scenes.first(where: { $0.id == sceneID }),
-                  let displayID = DisplayPort.currentDisplayID() else { return }
-            self.apply(scene, on: displayID)
+        return HotkeyCenter.shared.update(items) { [weak self] actionID in
+            guard let self, let displayID = DisplayPort.currentDisplayID() else { return }
+            if let adjustment = DisplayAdjustment.allCases.first(where: { $0.hotkeyID == actionID }) {
+                self.adjust(adjustment, on: displayID)
+            } else if let scene = self.scenes.first(where: { $0.id == actionID }) {
+                self.apply(scene, on: displayID)
+            }
+            NotificationCenter.default.post(name: .minibarDisplayValueChanged, object: nil)
             NotificationCenter.default.post(name: ModuleEvent.menuRefresh, object: nil)
+        }
+    }
+
+    private func adjust(_ adjustment: DisplayAdjustment, on displayID: CGDirectDisplayID) {
+        switch adjustment {
+        case .brightnessUp:
+            DisplayPort.setBrightness(DisplayPort.brightness(displayID) + 5, on: displayID)
+        case .brightnessDown:
+            DisplayPort.setBrightness(DisplayPort.brightness(displayID) - 5, on: displayID)
+        case .contrastUp:
+            DisplayPort.setContrast(DisplayPort.contrast(displayID) + 5, on: displayID)
+        case .contrastDown:
+            DisplayPort.setContrast(DisplayPort.contrast(displayID) - 5, on: displayID)
         }
     }
 
@@ -210,7 +267,8 @@ final class SceneStore {
     @discardableResult
     func setBinding(_ binding: HotkeyBinding?, for sceneID: String) -> BindingResult {
         if let binding,
-           bindings.contains(where: { $0.key != sceneID && $0.value == binding }) {
+           bindings.contains(where: { $0.key != sceneID && $0.value == binding })
+            || adjustmentBindings.values.contains(binding) {
             return .duplicate
         }
         let previous = bindings
@@ -222,6 +280,25 @@ final class SceneStore {
         // 注册失败（系统占用等）→ 回滚，别让设置显示一个按不响的键
         if refreshHotkeys().contains(sceneID) {
             bindings = previous
+            refreshHotkeys()
+            return .unavailable
+        }
+        save()
+        notify()
+        return .ok
+    }
+
+    @discardableResult
+    func setBinding(_ binding: HotkeyBinding?, for adjustment: DisplayAdjustment) -> BindingResult {
+        if let binding,
+           adjustmentBindings.contains(where: { $0.key != adjustment.rawValue && $0.value == binding })
+            || bindings.values.contains(binding) {
+            return .duplicate
+        }
+        let previous = adjustmentBindings
+        adjustmentBindings[adjustment.rawValue] = binding
+        if refreshHotkeys().contains(adjustment.hotkeyID) {
+            adjustmentBindings = previous
             refreshHotkeys()
             return .unavailable
         }
@@ -328,10 +405,9 @@ final class SceneStore {
         notify()
     }
 
-    /// 只复位内置的名字/数值/快捷键，不动用户自建
+    /// 只复位内置的名字/数值，不动用户自建，也不改用户主动设置的快捷键
     func restoreBuiltins(displayID: CGDirectDisplayID?) {
         for d in Self.builtinDefaults {
-            bindings[d.id] = Self.defaultBindings[d.id]
             if let index = scenes.firstIndex(where: { $0.id == d.id }) {
                 scenes[index].name = ""
                 scenes[index].builtin = true

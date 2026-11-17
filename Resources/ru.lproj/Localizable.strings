@@ -51,13 +51,19 @@
 "menu.appearance.dark" = "Тёмный";
 "menu.appearance.light" = "Светлый";
 
-"menu.display.pictureMode" = "Режим изображения";
+"menu.display.scenes" = "Сцены";
 "menu.display.modeItem" = "Режим %d";
 
 // MARK: - 场景（Scene）
 "menu.section.scenes" = "СЦЕНЫ";
 "menu.scene.dirty" = "Скорректировано";
-"settings.section.scenes" = "Сочетания клавиш сцен";
+"settings.section.hotkeys" = "Сочетания клавиш";
+"settings.section.adjustments" = "Регулировка";
+"settings.section.scenes" = "Сцены";
+"hotkey.brightnessUp" = "Увеличить яркость";
+"hotkey.brightnessDown" = "Уменьшить яркость";
+"hotkey.contrastUp" = "Увеличить контраст";
+"hotkey.contrastDown" = "Уменьшить контраст";
 "settings.scene.record" = "Сочетание для «%@»";
 "settings.scene.recording" = "Нажмите новое сочетание (Esc — отмена). Сейчас: %@";
 "settings.scene.unset" = "Не задано";

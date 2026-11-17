@@ -5,6 +5,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: SettingsPanel?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // —— 单实例检测：同 bundle ID 已在跑就激活旧实例，自退 ——
+        if let bundleID = Bundle.main.bundleIdentifier {
+            let others = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+                .filter { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
+            if let existing = others.first {
+                existing.activate(options: [.activateAllWindows])
+                NSLog("[MiniBar] 已有实例 PID=\(existing.processIdentifier) 在跑，自退")
+                NSApp.terminate(nil)
+                exit(0)
+                return
+            }
+        }
+
         shell.install()
         NotificationCenter.default.addObserver(
             self, selector: #selector(modulesChanged),

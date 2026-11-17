@@ -34,7 +34,7 @@ final class MenuBarShell: NSObject {
         // 之前是 22px 的 1x 位图，Retina 上被拉伸 2 倍，看起来发虚、也显得偏大。
         if let imgPath = Bundle.main.path(forResource: "MiniBar-menubar", ofType: "png"),
            let img = NSImage(contentsOfFile: imgPath) {
-            img.size = NSSize(width: 18, height: 18)  // 状态栏视觉尺寸定为 18×18pt
+            img.size = NSSize(width: 16, height: 16)  // 状态栏视觉尺寸：16pt
             img.isTemplate = true  // 让系统自动适配深浅色
             item.button?.image = img
             item.button?.imageScaling = .scaleProportionallyDown

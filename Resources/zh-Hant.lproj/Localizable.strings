@@ -51,13 +51,19 @@
 "menu.appearance.dark" = "深色";
 "menu.appearance.light" = "淺色";
 
-"menu.display.pictureMode" = "畫質模式";
+"menu.display.scenes" = "場景";
 "menu.display.modeItem" = "模式 %d";
 
 // MARK: - 场景（Scene）
 "menu.section.scenes" = "場景";
 "menu.scene.dirty" = "已調整";
-"settings.section.scenes" = "場景快速鍵";
+"settings.section.hotkeys" = "快速鍵";
+"settings.section.adjustments" = "調節";
+"settings.section.scenes" = "場景";
+"hotkey.brightnessUp" = "亮度增加";
+"hotkey.brightnessDown" = "亮度降低";
+"hotkey.contrastUp" = "對比度增加";
+"hotkey.contrastDown" = "對比度降低";
 "settings.scene.record" = "「%@」的快速鍵";
 "settings.scene.recording" = "按下新的快速鍵（Esc 取消）。目前：%@";
 "settings.scene.unset" = "未設定";

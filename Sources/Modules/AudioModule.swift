@@ -52,12 +52,17 @@ final class AudioModule: NSObject, MiniBarModule {
         var size = propertySize(kAudioDevicePropertyTransportType, object: id)
         var value: UInt32 = 0
         AudioObjectGetPropertyData(id, &address, 0, nil, &size, &value)
+        // CoreAudio transport 原始值：BuiltIn=6, USB=10, HDMI=8, BT=13/16, AirPlay=12,
+        // 105/110 是 Mac mini 3.5mm 口 Apple 私有值，归类为"其他"
         switch value {
-        case kAudioDeviceTransportTypeBuiltIn: return "内建"
-        case kAudioDeviceTransportTypeUSB: return "USB"
-        case kAudioDeviceTransportTypeHDMI: return "HDMI"
-        case kAudioDeviceTransportTypeBluetooth, kAudioDeviceTransportTypeBluetoothLE: return "蓝牙"
-        case kAudioDeviceTransportTypeAirPlay: return "隔空播放"
+        case kAudioDeviceTransportTypeBuiltIn:  return "内建"
+        case kAudioDeviceTransportTypeUSB:      return "USB"
+        case kAudioDeviceTransportTypeHDMI:     return "HDMI"
+        case kAudioDeviceTransportTypeBluetooth,
+             kAudioDeviceTransportTypeBluetoothLE: return "蓝牙"
+        case kAudioDeviceTransportTypeAirPlay:  return "隔空播放"
+        case kAudioDeviceTransportTypeThunderbolt: return "雷电"
+        case kAudioDeviceTransportTypeFireWire: return "火线"
         default: return "其他"
         }
     }

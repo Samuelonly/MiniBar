@@ -197,20 +197,21 @@ private struct ModuleRow: View {
     }
 }
 
-// MARK: - 场景快捷键行
+// MARK: - 快捷键行（调节与场景共用）
 
-private struct SceneHotkeyRow: View {
-    let scene: Scene
+private struct HotkeyRow: View {
+    let title: String
+    let binding: HotkeyBinding?
     let action: () -> Void
 
     var body: some View {
         HStack(spacing: 10) {
-            Text(scene.displayName)
+            Text(title)
                 .font(.system(size: 12))
                 .lineLimit(1)
             Spacer(minLength: 8)
             Button(action: action) {
-                Text(SceneStore.shared.binding(for: scene)?.display ?? L("settings.scene.unset"))
+                Text(binding?.display ?? L("settings.scene.unset"))
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 6)
@@ -239,9 +240,9 @@ enum HotkeyRecorder {
     private(set) static var isActive = false
     private static var controller: RecorderController?
 
-    static func present(sceneName: String, current: HotkeyBinding?,
+    static func present(actionName: String, current: HotkeyBinding?,
                         completion: @escaping (Outcome) -> Void) {
-        let controller = RecorderController(sceneName: sceneName, current: current)
+        let controller = RecorderController(actionName: actionName, current: current)
         self.controller = controller
         isActive = true
         let outcome = controller.run()
@@ -257,11 +258,11 @@ private final class RecorderController: NSObject {
     private var finished = false
     private var outcome: HotkeyRecorder.Outcome?
 
-    init(sceneName: String, current: HotkeyBinding?) {
+    init(actionName: String, current: HotkeyBinding?) {
         panel = HotkeyRecorderPanel(contentRect: NSRect(x: 0, y: 0, width: 340, height: 132),
                                     styleMask: [.titled], backing: .buffered, defer: false)
         super.init()
-        panel.title = String(format: L("settings.scene.record"), sceneName)
+        panel.title = String(format: L("settings.scene.record"), actionName)
         panel.isReleasedWhenClosed = false
         // 设置面板在 statusBar 层级，录制窗必须同层才能浮在它上面
         panel.level = .statusBar
@@ -362,17 +363,29 @@ struct SettingsContent: View {
 
     private var store: SceneStore { SceneStore.shared }
 
-    /// 打开录制窗口；冲突/占用时提示并回滚
+    /// 打开录制窗口；冲突/占用时提示并回滚。调节与场景共用同一套交互。
     private func record(_ scene: Scene) {
-        HotkeyRecorder.present(sceneName: scene.displayName,
-                               current: store.binding(for: scene)) { outcome in
+        record(name: scene.displayName, current: store.binding(for: scene)) {
+            store.setBinding($0, for: scene.id)
+        }
+    }
+
+    private func record(_ adjustment: DisplayAdjustment) {
+        record(name: adjustment.displayName, current: store.binding(for: adjustment)) {
+            store.setBinding($0, for: adjustment)
+        }
+    }
+
+    private func record(name: String, current: HotkeyBinding?,
+                        update: @escaping (HotkeyBinding?) -> SceneStore.BindingResult) {
+        HotkeyRecorder.present(actionName: name, current: current) { outcome in
             switch outcome {
             case .cancel:
                 break
             case .clear:
-                store.setBinding(nil, for: scene.id)
+                _ = update(nil)
             case .set(let binding):
-                switch store.setBinding(binding, for: scene.id) {
+                switch update(binding) {
                 case .ok: break
                 case .duplicate, .unavailable:
                     SceneDialogs.info(L("settings.scene.conflict"))
@@ -469,21 +482,15 @@ struct SettingsContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // 标题行 + 自定义关闭按钮（borderless 窗口没有系统红 X）
+            // 标题行：borderless 面板无系统红 X，关闭走「点外部 / Esc」
             HStack(alignment: .top) {
                 Text(L("settings.title"))
                     .font(.system(size: 11, weight: .semibold, design: .monospaced))
                     .tracking(1.6)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button(action: onClose) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 18, height: 18)
-                }
-                .buttonStyle(.plain)
             }
+            .padding(.bottom, 2)
             Divider()
 
             // PRD §10 文案纪律：功能说明置顶，用户语言，两行
@@ -514,15 +521,30 @@ struct SettingsContent: View {
 
             Divider()
 
-            Text(L("settings.section.scenes"))
+            Text(L("settings.section.hotkeys"))
                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
                 .tracking(1.6)
                 .foregroundStyle(.tertiary)
 
+            Text(L("settings.section.adjustments"))
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
             VStack(spacing: 4) {
                 let _ = revision
+                ForEach(DisplayAdjustment.allCases, id: \.self) { adjustment in
+                    HotkeyRow(title: adjustment.displayName,
+                              binding: store.binding(for: adjustment)) { record(adjustment) }
+                }
+            }
+
+            Text(L("settings.section.scenes"))
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
+                .padding(.top, 4)
+            VStack(spacing: 4) {
                 ForEach(store.scenes) { scene in
-                    SceneHotkeyRow(scene: scene) { record(scene) }
+                    HotkeyRow(title: scene.displayName,
+                              binding: store.binding(for: scene)) { record(scene) }
                 }
             }
 

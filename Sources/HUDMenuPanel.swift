@@ -165,9 +165,21 @@ final class HUDMenuPanel: NSPanel {
         let host = FirstMouseHostingView(rootView: makeContent(menu: menu, scrollable: scrollable,
                                                        cap: cap, state: state))
         host.sizingOptions = []
-        contentView = host
         host.frame = NSRect(x: 0, y: 0, width: Self.width, height: height)
-        applySkin()
+        host.autoresizingMask = [.width, .height]
+        host.appearance = PanelAppearance.current.nsAppearance
+
+        // 跟 SettingsPanel 一样：contentView = 容器 NSView，用 layer 画圆角/mask/border，
+        // 里面再塞 SwiftUI hosting view。NSHostingView 自己不裁圆角，必须外层 layer 兜住。
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: Self.width, height: height))
+        container.wantsLayer = true
+        container.layer?.backgroundColor = PanelAppearance.current.backgroundNS.cgColor
+        container.layer?.cornerRadius = 12
+        container.layer?.masksToBounds = true
+        container.layer?.borderWidth = 1
+        container.layer?.borderColor = PanelAppearance.current.borderNS.cgColor
+        container.addSubview(host)
+        contentView = container
 
         var frame = NSRect(x: 0, y: 0, width: Self.width, height: height)
         if let buttonFrame {
@@ -195,7 +207,9 @@ final class HUDMenuPanel: NSPanel {
     // MARK: 刷新（弹出盘后行内容变化；行数不变 → 高度不变）
     // 对外可见：PowerModule 屏幕睡/醒、StorageModule 盘挂载/弹出 → MenuBarShell 调
     func refreshMenu() {
-        guard let shell, let host = contentView as? NSHostingView<HUDMenuContent>,
+        guard let shell,
+              let container = contentView,
+              let host = container.subviews.first as? NSHostingView<HUDMenuContent>,
               let state = panelState else { return }
         let menu = shell.buildMenuModel()
 
@@ -208,6 +222,12 @@ final class HUDMenuPanel: NSPanel {
 
         let height = scrollable ? cap : natural
         guard abs(height - frame.height) > 0.5 else { return }
+        // 容器 layer 和 host 都跟着窗口 frame 一起变
+        container.frame.size.height = height
+        container.layer?.cornerRadius = 12
+        container.layer?.backgroundColor = PanelAppearance.current.backgroundNS.cgColor
+        container.layer?.borderColor = PanelAppearance.current.borderNS.cgColor
+        host.frame.size.height = height
         var f = frame
         f.size.height = height
         f.origin.y = (statusBarBottom ?? f.maxY) - height
@@ -578,22 +598,28 @@ private struct HUDMenuContent: View {
             }
         }
         .padding(4)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+        // 跟主面板一模一样的实色 + 圆角 + 边框，不要毛玻璃
+        .background(PanelAppearance.current.background, in: RoundedRectangle(cornerRadius: 12))
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(PanelAppearance.current.border, lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.45), radius: 14, y: 10)
+        .shadow(color: .black.opacity(0.35), radius: 10, y: 6)
     }
 
     @ViewBuilder
     private func childRow(_ child: NSMenuItem, siblings: [NSMenuItem]) -> some View {
-        if child.identifier?.rawValue == "minibar.micLevel" {
+        switch child.identifier?.rawValue {
+        case "minibar.pmSceneRow":
+            pmSceneRow(child)
+        case "minibar.pmSceneDirty", "minibar.pmSceneSaveNew", "minibar.pmSceneRestore":
+            childActionRow(child)
+        case "minibar.micLevel":
             MicLevelRow()
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .frame(height: HUDMenuPanel.meterRowHeight)
-        } else {
-            // 单选互斥：翻转后由 version 重绘统一回读各 item.state
+        default:
+            // 画质档位 / 旋转：toggle 行（保留原有开关渲染）
             MenuSwitchRow(item: child,
                           tag: (child.representedObject as? MenuRowMeta)?.caption,
                           hint: nil, hintWarn: false,
@@ -607,6 +633,88 @@ private struct HUDMenuContent: View {
                               }
                               version &+= 1
                           })
+        }
+    }
+
+    // MARK: 画质模式 submenu 里的场景行
+    private func pmSceneRow(_ item: NSMenuItem) -> some View {
+        let store = SceneStore.shared
+        let displayID = DisplayPort.currentDisplayID()
+        let sceneID = item.representedObject as? String ?? ""
+        let scene = store.scenes.first { $0.id == sceneID }
+        let isActive = item.state == .on
+        let dirty = item.tag == 1
+        let v = scene.flatMap { s in displayID.map { d in store.values(s, for: d) } }
+            ?? SceneValues(brightness: 0, contrast: 0)
+        let bindingText = scene.flatMap { store.binding(for: $0)?.display }
+
+        return HStack(spacing: 8) {
+            // 激活圆点
+            Text(isActive ? "●" : " ")
+                .font(.system(size: 8))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 10)
+
+            Text(scene?.displayName ?? item.title)
+                .font(.system(size: 12))
+                .lineLimit(1)
+
+            if dirty {
+                Text(L("menu.scene.dirty"))
+                    .font(.system(size: 9))
+                    .foregroundStyle(PanelAppearance.current.label)
+            }
+
+            Spacer(minLength: 8)
+
+            // 数值 tag（已激活才显示，跟主面板场景行一致）
+            if isActive {
+                Text("\(Int(v.brightness.rounded()))/\(Int(v.contrast.rounded()))")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(PanelAppearance.current.label)
+            }
+
+            // 快捷键 tag（已绑定时才显示）
+            if let bindingText {
+                Text(bindingText)
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(PanelAppearance.current.label)
+                    .frame(minWidth: 26, alignment: .trailing)
+            }
+        }
+        .padding(.horizontal, HUDMenuPanel.childHInset)
+        .frame(height: HUDMenuPanel.childRowHeight)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.primary.opacity(isActive ? 0.06 : 0))
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            send(item)
+            version &+= 1
+        }
+    }
+
+    // 画质模式 submenu 里的动作行（dirty 保存 / 存新 / 恢复）
+    private func childActionRow(_ item: NSMenuItem) -> some View {
+        HStack(spacing: 8) {
+            if let image = item.image {
+                Image(nsImage: image).resizable()
+                    .frame(width: 12, height: 12)
+                    .foregroundStyle(.secondary)
+            }
+            Text(item.title)
+                .font(.system(size: 11))
+                .foregroundStyle(Color.accentColor)
+                .lineLimit(1)
+            Spacer(minLength: 8)
+        }
+        .padding(.horizontal, HUDMenuPanel.childHInset)
+        .frame(height: HUDMenuPanel.childRowHeight)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            send(item)
+            NotificationCenter.default.post(name: ModuleEvent.menuRefresh, object: nil)
         }
     }
 

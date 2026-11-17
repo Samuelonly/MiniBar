@@ -51,13 +51,19 @@
 "menu.appearance.dark" = "Dunkel";
 "menu.appearance.light" = "Hell";
 
-"menu.display.pictureMode" = "Bildmodus";
+"menu.display.scenes" = "Szenen";
 "menu.display.modeItem" = "Modus %d";
 
 // MARK: - 场景（Scene）
 "menu.section.scenes" = "SZENEN";
 "menu.scene.dirty" = "Angepasst";
-"settings.section.scenes" = "Szenen-Kürzel";
+"settings.section.hotkeys" = "Tastaturkurzbefehle";
+"settings.section.adjustments" = "Anpassung";
+"settings.section.scenes" = "Szenen";
+"hotkey.brightnessUp" = "Helligkeit erhöhen";
+"hotkey.brightnessDown" = "Helligkeit verringern";
+"hotkey.contrastUp" = "Kontrast erhöhen";
+"hotkey.contrastDown" = "Kontrast verringern";
 "settings.scene.record" = "Kürzel für „%@“";
 "settings.scene.recording" = "Neues Kürzel drücken (Esc zum Abbrechen). Aktuell: %@";
 "settings.scene.unset" = "Nicht belegt";

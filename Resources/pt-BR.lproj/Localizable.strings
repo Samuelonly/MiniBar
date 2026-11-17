@@ -51,13 +51,19 @@
 "menu.appearance.dark" = "Escuro";
 "menu.appearance.light" = "Claro";
 
-"menu.display.pictureMode" = "Modo de imagem";
+"menu.display.scenes" = "Cenas";
 "menu.display.modeItem" = "Modo %d";
 
 // MARK: - 场景（Scene）
 "menu.section.scenes" = "CENAS";
 "menu.scene.dirty" = "Ajustado";
-"settings.section.scenes" = "Atalhos de cenas";
+"settings.section.hotkeys" = "Atalhos de teclado";
+"settings.section.adjustments" = "Ajustes";
+"settings.section.scenes" = "Cenas";
+"hotkey.brightnessUp" = "Aumentar brilho";
+"hotkey.brightnessDown" = "Reduzir brilho";
+"hotkey.contrastUp" = "Aumentar contraste";
+"hotkey.contrastDown" = "Reduzir contraste";
 "settings.scene.record" = "Atalho para “%@”";
 "settings.scene.recording" = "Pressione o novo atalho (Esc para cancelar). Atual: %@";
 "settings.scene.unset" = "Não definido";

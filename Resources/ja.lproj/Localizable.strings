@@ -51,13 +51,19 @@
 "menu.appearance.dark" = "ダーク";
 "menu.appearance.light" = "ライト";
 
-"menu.display.pictureMode" = "ピクチャーモード";
+"menu.display.scenes" = "シーン";
 "menu.display.modeItem" = "モード %d";
 
 // MARK: - 场景（Scene）
 "menu.section.scenes" = "シーン";
 "menu.scene.dirty" = "調整済み";
-"settings.section.scenes" = "シーンのショートカット";
+"settings.section.hotkeys" = "キーボードショートカット";
+"settings.section.adjustments" = "調整";
+"settings.section.scenes" = "シーン";
+"hotkey.brightnessUp" = "明るさを上げる";
+"hotkey.brightnessDown" = "明るさを下げる";
+"hotkey.contrastUp" = "コントラストを上げる";
+"hotkey.contrastDown" = "コントラストを下げる";
 "settings.scene.record" = "「%@」のショートカット";
 "settings.scene.recording" = "新しいショートカットを押してください（Esc でキャンセル）。現在：%@";
 "settings.scene.unset" = "未設定";

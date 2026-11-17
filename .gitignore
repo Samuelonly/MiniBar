@@ -1,10 +1,5 @@
 build/
 build2/
-references/
 .DS_Store
-HANDOFF*.md
-"hand off.md"
-PRD.md
-TAILORING.md
 mockups/
 tools/

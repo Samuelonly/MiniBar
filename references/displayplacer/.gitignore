@@ -1,0 +1,8 @@
+displayplacer
+displayplacer.dSYM/
+
+.DS_Store
+
+.idea/
+.vscode/
+cmake-build-debug/
