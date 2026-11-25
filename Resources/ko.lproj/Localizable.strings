@@ -37,6 +37,7 @@
 "menu.power.keepAwake" = "절전 방지";
 "menu.section.audio" = "오디오";
 "menu.audio.mute" = "전체 음소거";
+"menu.audio.volume" = "볼륨";
 "menu.audio.speakers" = "스피커";
 "menu.audio.microphones" = "마이크";
 "menu.section.storage" = "저장소";

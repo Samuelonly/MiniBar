@@ -1,4 +1,5 @@
 import AppKit
+import AudioToolbox
 import CoreAudio
 
 /// 音频路由模块（PRD §3.4）：全局静音 + 扬声器/麦克风子菜单切换。
@@ -84,6 +85,34 @@ final class AudioModule: NSObject, MiniBarModule {
         var deviceID = id
         var size = UInt32(MemoryLayout<AudioDeviceID>.stride)
         AudioObjectSetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, size, &deviceID)
+    }
+
+    // MARK: - 音量
+
+    /// 默认输出设备的虚拟主音量（0~1）。vmvc 是系统音量滑块用的属性，
+    /// 内置 / 蓝牙 / HDMI 设备都能读到同一个值；逐通道的 volm 不一定存在。
+    private var outputVolume: Double {
+        let device = defaultDeviceID(kAudioHardwarePropertyDefaultOutputDevice)
+        guard device != kAudioObjectUnknown else { return 0.5 }
+        var address = propertyAddress(kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
+                                      scope: kAudioObjectPropertyScopeOutput)
+        var size = UInt32(MemoryLayout<Float32>.stride)
+        var value: Float32 = 0
+        guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, &value) == noErr else {
+            return 0.5
+        }
+        return min(1, max(0, Double(value)))
+    }
+
+    /// 音量滑杆变化（拖拽 / 滚轮共用）：写回系统默认输出设备的音量。
+    @objc private func volumeChanged(_ sender: NSSlider) {
+        let device = defaultDeviceID(kAudioHardwarePropertyDefaultOutputDevice)
+        guard device != kAudioObjectUnknown else { return }
+        var address = propertyAddress(kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
+                                      scope: kAudioObjectPropertyScopeOutput)
+        var value = Float32(min(1, max(0, sender.doubleValue)))
+        let size = UInt32(MemoryLayout<Float32>.stride)
+        AudioObjectSetPropertyData(device, &address, 0, nil, size, &value)
     }
 
     // MARK: - 静音
@@ -197,6 +226,15 @@ final class AudioModule: NSObject, MiniBarModule {
         let inputDefault = defaultDeviceID(kAudioHardwarePropertyDefaultInputDevice)
 
         var items = [sectionHeader(L("menu.section.audio"))]
+
+        // 音量行在「全局静音」上方，和显示模块的亮度/对比度共用滑杆渲染与滚轮逻辑
+        let volume = NSSlider(value: outputVolume, minValue: 0, maxValue: 1,
+                              target: self, action: #selector(volumeChanged(_:)))
+        let volumeItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        volumeItem.view = SliderRowView(title: L("menu.audio.volume"), symbol: "speaker.wave.2",
+                                        slider: volume, rowWidth: 308)
+        items.append(volumeItem)
+
         let mute = menuItem(L("menu.audio.mute"),
                             symbol: isMuted ? "speaker.slash" : "speaker.wave.2",
                             action: #selector(toggleMute(_:)), target: self,

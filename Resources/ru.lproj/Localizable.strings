@@ -37,6 +37,7 @@
 "menu.power.keepAwake" = "Не давать спать";
 "menu.section.audio" = "АУДИО";
 "menu.audio.mute" = "Заглушить всё";
+"menu.audio.volume" = "Громкость";
 "menu.audio.speakers" = "Динамики";
 "menu.audio.microphones" = "Микрофоны";
 "menu.section.storage" = "ХРАНИЛИЩЕ";

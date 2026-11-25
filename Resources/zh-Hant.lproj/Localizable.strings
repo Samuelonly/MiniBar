@@ -37,6 +37,7 @@
 "menu.power.keepAwake" = "防休眠";
 "menu.section.audio" = "音訊";
 "menu.audio.mute" = "全域靜音";
+"menu.audio.volume" = "音量";
 "menu.audio.speakers" = "揚聲器";
 "menu.audio.microphones" = "麥克風";
 "menu.section.storage" = "儲存";

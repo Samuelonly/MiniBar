@@ -37,6 +37,7 @@
 "menu.power.keepAwake" = "スリープ防止";
 "menu.section.audio" = "オーディオ";
 "menu.audio.mute" = "すべてミュート";
+"menu.audio.volume" = "音量";
 "menu.audio.speakers" = "スピーカー";
 "menu.audio.microphones" = "マイク";
 "menu.section.storage" = "ストレージ";

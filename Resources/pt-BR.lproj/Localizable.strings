@@ -37,6 +37,7 @@
 "menu.power.keepAwake" = "Manter acordado";
 "menu.section.audio" = "ÁUDIO";
 "menu.audio.mute" = "Silenciar tudo";
+"menu.audio.volume" = "Volume";
 "menu.audio.speakers" = "Alto-falantes";
 "menu.audio.microphones" = "Microfones";
 "menu.section.storage" = "ARMAZENAMENTO";

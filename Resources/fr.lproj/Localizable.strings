@@ -37,6 +37,7 @@
 "menu.power.keepAwake" = "Empêcher la veille";
 "menu.section.audio" = "AUDIO";
 "menu.audio.mute" = "Tout muet";
+"menu.audio.volume" = "Volume";
 "menu.audio.speakers" = "Haut-parleurs";
 "menu.audio.microphones" = "Microphones";
 "menu.section.storage" = "STOCKAGE";
