@@ -51,6 +51,7 @@
 "menu.mic.inputLevel" = "Eingangspegel";
 "menu.appearance.dark" = "Dunkel";
 "menu.appearance.light" = "Hell";
+"settings.appearance.system" = "System folgen";
 
 "menu.display.scenes" = "Szenen";
 "menu.display.modeItem" = "Modus %d";

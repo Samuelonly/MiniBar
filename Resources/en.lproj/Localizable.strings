@@ -51,6 +51,7 @@
 "menu.mic.inputLevel" = "Input level";
 "menu.appearance.dark" = "Dark";
 "menu.appearance.light" = "Light";
+"settings.appearance.system" = "Follow System";
 
 "menu.display.scenes" = "Scenes";
 "menu.display.modeItem" = "Mode %d";

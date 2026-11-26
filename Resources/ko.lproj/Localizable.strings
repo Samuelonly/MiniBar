@@ -51,6 +51,7 @@
 "menu.mic.inputLevel" = "입력 레벨";
 "menu.appearance.dark" = "다크";
 "menu.appearance.light" = "라이트";
+"settings.appearance.system" = "시스템 설정 따르기";
 
 "menu.display.scenes" = "장면";
 "menu.display.modeItem" = "모드 %d";

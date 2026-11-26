@@ -77,7 +77,7 @@ final class HUDMenuPanel: NSPanel {
         level = .floating
         isOpaque = false
         backgroundColor = .clear
-        // 皮肤：未手动跟随系统、手动后记住选择（PanelAppearance）。
+        // 皮肤：跟随系统 / 浅色 / 深色 三态，可随时回退（PanelAppearance）。
         // 窗口 appearance 决定 NSSlider / NSSwitch 原生控件配色，必须跟着皮肤走。
         appearance = PanelAppearance.current.nsAppearance
         hasShadow = true
@@ -758,7 +758,9 @@ private struct HUDMenuContent: View {
         let chips = item.submenu?.items ?? []
         return HStack(spacing: 6) {
             ForEach(Array(chips.enumerated()), id: \.offset) { _, chip in
-                ChipView(item: chip) {
+                ChipView(item: chip,
+                         selected: chip.identifier?.rawValue == "minibar.skinAuto"
+                             && chip.state == .on) {
                     send(chip)
                     version &+= 1
                 }
@@ -775,13 +777,13 @@ private struct HUDMenuContent: View {
 // MARK: - 外观 chip（HTML .chip）
 private struct ChipView: View {
     let item: NSMenuItem
+    /// 仅「跟随系统」chip 用选中态表达当前是否处于自动模式；其余仍是动作按钮
+    let selected: Bool
     let onTap: () -> Void
 
     @State private var hovering = false
 
     var body: some View {
-        // chip 是**按钮**，不是开关：点一下执行动作，没有选中态。
-        // （HTML 的 .chip.on 是原型里标注「当前模式」用的，不适用于这里的语义）
         HStack(spacing: 7) {
             if let image = item.image {
                 Image(nsImage: image).resizable().scaledToFit()
@@ -796,11 +798,11 @@ private struct ChipView: View {
         .frame(height: 30)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color.primary.opacity(hovering ? 0.12 : 0.06))
+                .fill(Color.primary.opacity(selected ? 0.18 : (hovering ? 0.12 : 0.06)))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                .strokeBorder(Color.primary.opacity(selected ? 0.26 : 0.08), lineWidth: 1)
         )
         .contentShape(Rectangle())
         .onHover { hovering = $0 }

@@ -51,6 +51,7 @@
 "menu.mic.inputLevel" = "Уровень входа";
 "menu.appearance.dark" = "Тёмный";
 "menu.appearance.light" = "Светлый";
+"settings.appearance.system" = "Следовать системе";
 
 "menu.display.scenes" = "Сцены";
 "menu.display.modeItem" = "Режим %d";

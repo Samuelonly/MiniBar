@@ -51,6 +51,7 @@
 "menu.mic.inputLevel" = "輸入電平";
 "menu.appearance.dark" = "深色";
 "menu.appearance.light" = "淺色";
+"settings.appearance.system" = "跟隨系統";
 
 "menu.display.scenes" = "場景";
 "menu.display.modeItem" = "模式 %d";

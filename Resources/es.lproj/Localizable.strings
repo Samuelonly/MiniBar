@@ -51,6 +51,7 @@
 "menu.mic.inputLevel" = "Nivel de entrada";
 "menu.appearance.dark" = "Oscuro";
 "menu.appearance.light" = "Claro";
+"settings.appearance.system" = "Seguir al sistema";
 
 "menu.display.scenes" = "Escenas";
 "menu.display.modeItem" = "Modo %d";

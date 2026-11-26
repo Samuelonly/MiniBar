@@ -3,7 +3,7 @@ import SwiftUI
 
 /// PRD §10 HUD 设置面板（C 档定稿视觉）：
 /// NSPanel 不抢前台焦点 + 大圆角大阴影 + 等宽大写节标题。
-/// 皮肤与主面板一致（PanelAppearance）：未手动跟随系统，手动后记住选择。
+/// 皮肤与主面板一致（PanelAppearance）：跟随系统 / 浅色 / 深色 三态，可随时回退。
 /// 纯 SwiftUI 勾选列表，勾选即实时生效（PRD §5），零 WebView。
 final class SettingsPanel: NSPanel {
     static let width: CGFloat = 380
@@ -36,7 +36,7 @@ final class SettingsPanel: NSPanel {
         // 窗口透明，背景/圆角由 AppKit 容器图层画
         isOpaque = false
         backgroundColor = .clear
-        // 皮肤与主面板同一套规则（PanelAppearance）：未手动跟随系统，手动后记住选择
+        // 皮肤与主面板同一套规则（PanelAppearance）：三态，默认跟随系统
         appearance = PanelAppearance.current.nsAppearance
         hasShadow = true
         // 必须用 statusBar 层级：MiniBar 是 LSUIElement 后台 app，从不 active，
@@ -71,7 +71,7 @@ final class SettingsPanel: NSPanel {
         contentView = container
         center()
 
-        // 手动换肤 → 立即重绘；系统深浅色变化 → 未手动时跟随（applySkin 内部判断）
+        // 显式换肤 → 立即重绘；系统深浅色变化 → 跟随系统态才更新（applySkin 内部判断）
         skinObserver = NotificationCenter.default.addObserver(
             forName: PanelAppearance.changed, object: nil, queue: .main
         ) { [weak self] _ in self?.applySkin() }
@@ -422,6 +422,12 @@ struct SettingsContent: View {
 
     private var store: SceneStore { SceneStore.shared }
 
+    /// 外观三态：跟随系统 / 浅色 / 深色。写入走 PanelAppearance.setMode，保证广播与旧键迁移。
+    private var appearanceMode: Binding<PanelAppearanceMode> {
+        Binding(get: { PanelAppearance.mode },
+                set: { PanelAppearance.setMode($0) })
+    }
+
     /// 打开录制窗口；冲突/占用时提示并回滚。调节与场景共用同一套交互。
     private func record(_ scene: Scene) {
         record(name: scene.displayName, current: store.binding(for: scene)) {
@@ -595,6 +601,20 @@ struct SettingsContent: View {
                       subtitle: L("module.audio.subtitle"), enabled: $audio)
             ModuleRow(icon: "externaldrive", title: L("module.storage.title"),
                       subtitle: L("module.storage.subtitle"), enabled: $storage)
+
+            Divider()
+
+            Text(L("menu.section.appearance"))
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .tracking(1.6)
+                .foregroundStyle(.tertiary)
+
+            Picker("", selection: appearanceMode) {
+                Text(L("settings.appearance.system")).tag(PanelAppearanceMode.system)
+                Text(L("menu.appearance.light")).tag(PanelAppearanceMode.light)
+                Text(L("menu.appearance.dark")).tag(PanelAppearanceMode.dark)
+            }
+            .pickerStyle(.segmented)
 
             Divider()
 

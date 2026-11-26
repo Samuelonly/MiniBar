@@ -340,10 +340,10 @@ enum ModuleEvent {
 
 // MARK: - 面板皮肤（主面板 + 设置面板共用）
 //
-// 规则（用户定稿，无开关）：
-//   从未点过外观 chip → 跟随系统，系统切深浅色面板立刻跟着换；
-//   点过一次 chip     → 记住用户选择，之后永远用手动的，不再随系统变。
-// chip 只切 MiniBar 自己的面板皮肤，不改系统外观。
+// 三态模型：跟随系统 / 浅色 / 深色。
+//   默认跟随系统；任何一态都可显式切回，不再有「点一次就永久锁定」的单向闩锁。
+//   HUD chip 只做浅色/深色快速切换；「跟随系统」在 HUD 与设置面板都有明确入口。
+// 皮肤只影响 MiniBar 自己的面板，不改系统外观。
 
 /// 菜单栏面板用的 HostingView：接受「首次点击」。
 /// borderless / 非 key 面板在 App 未激活时，第一次点击会被系统当成激活窗口吞掉，
@@ -395,28 +395,56 @@ enum PanelSkin: String {
     }
 }
 
+enum PanelAppearanceMode: String {
+    case system, light, dark
+
+    /// 显式皮肤；跟随系统时返回 nil，由当前系统外观决定
+    var skin: PanelSkin? {
+        switch self {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+}
+
 enum PanelAppearance {
-    /// UserDefaults 键：存手动皮肤；不存在 = 跟随系统
-    static let manualKey = "panel.skin.manual"
-    /// 手动皮肤变化广播（面板监听后重建）
+    /// 三态偏好键。旧版 `panel.skin.manual` 存的是 light/dark，仍可读，保证升级不回退。
+    static let modeKey = "panel.skin.mode"
+    static let legacyManualKey = "panel.skin.manual"
+    /// 皮肤变化广播（面板监听后重建）
     static let changed = Notification.Name("minibar.panelSkinChanged")
 
-    static var manual: PanelSkin? {
-        PanelSkin(rawValue: UserDefaults.standard.string(forKey: manualKey) ?? "")
+    static var mode: PanelAppearanceMode {
+        let defaults = UserDefaults.standard
+        if let raw = defaults.string(forKey: modeKey),
+           let mode = PanelAppearanceMode(rawValue: raw) { return mode }
+        if let legacy = defaults.string(forKey: legacyManualKey),
+           let skin = PanelSkin(rawValue: legacy) {
+            return skin == .dark ? .dark : .light
+        }
+        return .system
     }
 
-    /// 当前有效皮肤：手动优先，未手动跟随系统
+    /// 当前有效皮肤：显式 light/dark 优先，否则跟随系统
     static var current: PanelSkin {
-        if let manual { return manual }
+        if let skin = mode.skin { return skin }
         let dark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
         return dark ? .dark : .light
     }
 
-    /// chip 点击：手动切到当前皮肤的反面，并广播（菜单 + 两块面板一起换）
-    static func toggleManual() {
-        let next: PanelSkin = current == .dark ? .light : .dark
-        UserDefaults.standard.set(next.rawValue, forKey: manualKey)
+    /// 显式设置三态，并广播（菜单 + 两块面板一起换）
+    static func setMode(_ newMode: PanelAppearanceMode) {
+        let defaults = UserDefaults.standard
+        defaults.set(newMode.rawValue, forKey: modeKey)
+        defaults.removeObject(forKey: legacyManualKey)
         NotificationCenter.default.post(name: changed, object: nil)
         NotificationCenter.default.post(name: ModuleEvent.menuRefresh, object: nil)
+    }
+
+    /// HUD 快速切换：按当前有效皮肤切到反面，落成一个显式 light/dark 选择
+    static func toggleManual() {
+        let next: PanelSkin = current == .dark ? .light : .dark
+        setMode(next == .dark ? .dark : .light)
     }
 }

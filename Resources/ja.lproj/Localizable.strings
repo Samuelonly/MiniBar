@@ -51,6 +51,7 @@
 "menu.mic.inputLevel" = "入力レベル";
 "menu.appearance.dark" = "ダーク";
 "menu.appearance.light" = "ライト";
+"settings.appearance.system" = "システムに合わせる";
 
 "menu.display.scenes" = "シーン";
 "menu.display.modeItem" = "モード %d";
